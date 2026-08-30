@@ -2,12 +2,12 @@
 
 Portfolio site for Adam Flint — Lead Instructional Designer, Sydney.
 
-Single static page, no build step. `index.html` contains everything (styles and
-script inline; fonts from Google Fonts).
+Single static page, no build step. `public/index.html` contains everything
+(styles and script inline; fonts from Google Fonts). `public/` is the deploy root.
 
 ## Local preview
 
-    python3 -m http.server 8899
+    python3 -m http.server 8899 --directory public
 
 Then open http://localhost:8899
 
@@ -37,4 +37,6 @@ computing its start and end rows and setting `grid-row: endRow / startRow`.
 
 ## Deploy
 
-Hosted on Cloudflare Pages. Production deploys come from `main`.
+Hosted on Cloudflare Pages, project `adam-flint-com`, deploy root `public/`.
+
+    npx wrangler pages deploy public --project-name adam-flint-com --branch main
