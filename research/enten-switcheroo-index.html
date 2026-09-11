@@ -320,11 +320,15 @@
   <p><strong>Sources.</strong> Every entry marked <em>transcript</em> was read from CNN's own published transcript at <code>transcripts.cnn.com</code>, which is the primary record. The speaker label was checked each time, so anchors' uses of the word (John Berman, Boris Sanchez and a show tease all used it in this period) are excluded — this index is Enten only.</p>
   <p><strong>What "verified" means here.</strong> CNN publishes these as rush transcripts, so wording can be lightly off from the broadcast and punctuation is inconsistent. Quotes are reproduced as CNN printed them. Three entries are marked <em>index snippet</em>: the phrase appears in the search index for that transcript page, but the extraction pass couldn't re-confirm the sentence in the page body, so treat the wording as close-but-unconfirmed.</p>
   <p><strong>Video.</strong> CNN does not publish a clip for most of these, and clips can't be redistributed, so links point at the original source that hosts the video. Where I could tie a specific clip to a specific segment, there's a <em>watch</em> button; where I couldn't, the transcript link is the record. Two of the clips are HuffPost's unlisted YouTube uploads — they play from the direct link but won't turn up in a YouTube search.</p>
+  <p><strong>The YouTube pass.</strong> I read the captions of CNN's and HuffPost's uploads to check them against the transcripts. That confirmed the Labor Day and non-college clips word-for-word, and it turned up the 24 May entry — a long-form CNN YouTube video that never aired as a TV segment, so it has no CNN transcript at all, and which contains three uses rather than the two that reporters quoted.</p>
+  <p><strong>Why the YouTube sweep stops there.</strong> Two things limit it, and both cut against completeness rather than for it. YouTube's auto-captions mis-transcribe the word — CNN's most recent Enten video renders it <em>“that's a 14 point switcher row”</em> — so searching captions for the string produces false negatives, and a video coming back clean is not evidence the word is absent. And CNN's “Harry Enten” playlist runs to roughly 173 videos, but the playlist page won't render for scraping, so I could not enumerate it and check them one by one. Caption checks here are used as positive evidence only; no video was scored as a negative.</p>
+  <p><strong>No timestamps.</strong> I wanted to deep-link each use to its moment in the video. The caption source I could reach strips timestamps, and an extraction pass that appeared to supply them was inventing them — one “hit” sat four minutes past the end of an 8:27 video. They're left out rather than guessed.</p>
   <p><strong>Known gaps.</strong> This is thorough, not exhaustive, and I'd rather say so than pretend otherwise:</p>
   <ul>
     <li>CNN's transcript archive doesn't cover every hour of every show, and search indexing of it is incomplete — segments that aired but were never transcribed or indexed can't be found this way.</li>
-    <li>Enten also appears on CNN podcasts, digital video and <em>Enten roundup</em> compilations that aren't in the TV transcript archive at all.</li>
-    <li>Two further segments are well documented by reporters but I could not locate their transcripts, so they sit at the bottom of the index marked <em>secondary source</em> rather than being dropped or quietly upgraded.</li>
+    <li>Enten also appears on CNN podcasts, his digital show <em>The Enten Scale</em>, and weekly <em>Enten roundup</em> compilations that aren't in the TV transcript archive at all. The 24 May entry is one such video; there are almost certainly others I haven't reached, for the caption reasons above.</li>
+    <li>One further segment (the 71-point swing, 19 March 2026) is well documented by reporters but I could not locate its transcript, so it is marked <em>secondary source</em> rather than dropped or quietly upgraded.</li>
+    <li>Roundup compilations re-publish segments that already appear here. A use is counted once, at its original airing — a re-cut is linked as video, never counted again.</li>
     <li>He uses the word roughly weekly, so this index goes stale fast. The newest entry here is 10 September 2026.</li>
   </ul>
 </section>
@@ -518,6 +522,9 @@ const DATA = [
 
  {d:"2026-09-10",t:"09:30",show:"CNN News Central",code:"cnc",
   url:"https://transcripts.cnn.com/show/cnc/date/2026-09-10/segment/06",v:"transcript",
+  clip:"https://www.youtube.com/watch?v=A-9_kMzRwcs",
+  clipLabel:"Watch · CNN (digital cut)",
+  note:"CNN's YouTube video “Trump's ‘atrocious’ approval threatens to sink the GOP: Enten explains” carries the same 14-point figure — its auto-captions render it “that's a 14 point switcher row.” I could not establish whether that is this same take re-cut or a separate recording, so it is linked as video but not counted as an extra use.",
   m:[{p:14,q:"Trump's net approval in Texas",x:"Twelve points underwater. That's a 14-point switcheroo."}]},
 
  /* --- secondary-sourced: reported by outlets, transcript not located --- */
@@ -528,13 +535,15 @@ const DATA = [
   clipLabel:"Watch · Mediaite", v:"secondary",
   m:[{p:71,q:"Independents on the cost of living",x:"Look at that switcheroo. That is a 71-point switcheroo!"}]},
 
- {d:"2026-05-24",t:"",show:"CNN",code:"cnn",
-  url:"https://www.realclearpolitics.com/video/2026/05/24/cnns_harry_enten_the_young_men_who_elected_trump_are_switching_sides.html",
-  urlLabel:"Source · RealClearPolitics",
+ {d:"2026-05-24",t:"",show:"CNN digital (YouTube)",code:"yt",
+  url:"https://www.youtube.com/watch?v=iQxAiKQ-z-s",
+  urlLabel:"Captions · CNN video",
   clip:"https://www.youtube.com/watch?v=iQxAiKQ-z-s",
-  clipLabel:"Watch · CNN on YouTube", v:"secondary",
-  m:[{p:63,q:"Young men switching sides — two figures given in one segment",x:"Again, this is a switcheroo of, what, 63 points in just a year and a half?"},
-     {p:56,q:"Young voters overall, as quoted by HuffPost",x:"That's a switcheroo. That's 56 points — 56 points in just a year and a half!"}]}
+  clipLabel:"Watch · CNN on YouTube", v:"captions",
+  note:"Not a TV segment, so it has no CNN transcript — this is CNN's own long-form YouTube video, “The young men who elected Trump are switching sides now” (8:27). Quotes read from the video's captions, which are clean on this upload. Three uses, the most in any single item here.",
+  m:[{p:56,q:"Young men's overall net approval — “Of what? This.”",x:"His net approval rating among young men. Look at this. -55 points, -55 points. That's a switcheroo. Of what? This. That's 56 points. 56 points in just a year and a half."},
+     {p:63,q:"Young men on foreign policy — “Jacques Cousteau never got that low”",x:"This is a switcheroo of, what, 63 points in just a year and a half worth of time."},
+     {p:25,q:"Men under 30 on the 2026 congressional ballot",x:"That is a 25 point switcheroo, a 25 point switcheroo."}]}
 ];
 
 const MONTHS=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
@@ -575,7 +584,8 @@ document.getElementById("show").innerHTML=
 // ---- render ----
 const VNOTE={
   snippet:"Wording taken from the search index for this transcript page; the extraction pass could not re-confirm the sentence in the page body. Treat as close-but-unconfirmed.",
-  secondary:"Reported by a named outlet with video, but I could not locate the CNN transcript for this segment. Quote is the outlet's, not CNN's own record."
+  secondary:"Reported by a named outlet with video, but I could not locate the CNN transcript for this segment. Quote is the outlet's, not CNN's own record.",
+  captions:"Verified from the video's own captions rather than a CNN transcript."
 };
 
 function render(){
@@ -631,7 +641,8 @@ function render(){
         ${e.clip?`<a class="play" href="${e.clip}" target="_blank" rel="noopener">${esc(e.clipLabel)}</a>`:""}
       </div>`;
 
-    const flag=VNOTE[e.v]?`<div class="flagnote">${VNOTE[e.v]}</div>`:"";
+    const flagText=[VNOTE[e.v],e.note].filter(Boolean).join(" ");
+    const flag=flagText?`<div class="flagnote">${esc(flagText)}</div>`:"";
 
     return `<article class="entry">${slug}<div>${moments}${links}${flag}</div></article>`;
   }).join("");
