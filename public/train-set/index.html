@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chipboard Junction</title>
+<meta name="description" content="Build a 1970s-style HO train set on an 8 × 4 sheet of particle board, then run it with an old-fashioned power controller.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Chivo+Mono:wght@500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap">
+<style>
+/* Layout: full-bleed 3D board; bakelite control panels float over it (left = build tray, right = power controller). One committed dark look. */
+:root{
+  --bakelite:#1c1512;      /* panel body, like an old controller case */
+  --bakelite-2:#2a201b;    /* raised surfaces, buttons */
+  --bakelite-3:#3a2c24;    /* hover */
+  --cream:#f0e4c8;         /* lettering */
+  --cream-dim:#b8a78a;     /* secondary lettering */
+  --signal:#d2432c;        /* accent: signal red */
+  --brass:#e3b54a;         /* active / selected: brass & marker yellow */
+  --tape-black:#121212;
+  --tape-red:#b3261e;
+  --tape-blue:#1e4f9c;
+  --room:#211915;          /* body ground behind the canvas */
+  --ok:#8fc46a;
+  --display:"Fraunces", "Georgia", serif;
+  --ui:"Barlow", "Helvetica Neue", Arial, sans-serif;
+  --mono:"Chivo Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%;margin:0}
+body{background:var(--room);color:var(--cream);font:15px/1.4 var(--ui);overflow:hidden;-webkit-font-smoothing:antialiased}
+#app{position:fixed;inset:0}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* Top bar */
+.topbar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;pointer-events:none;
+  background:linear-gradient(to bottom, rgba(20,14,11,.82), rgba(20,14,11,0));}
+.topbar > *{pointer-events:auto}
+.brand{display:flex;flex-direction:column;min-width:0;margin-right:auto}
+.brand-name{font-family:var(--display);font-weight:800;font-size:1.45rem;letter-spacing:.01em;line-height:1.05;color:var(--cream);text-shadow:0 2px 0 rgba(0,0,0,.5)}
+.brand-sub{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim)}
+.modes{display:flex;background:var(--bakelite);border-radius:999px;padding:3px;box-shadow:inset 0 1px 3px rgba(0,0,0,.6),0 1px 0 rgba(255,240,210,.08)}
+.modes button{border:0;background:transparent;padding:7px 18px;border-radius:999px;font-weight:700;letter-spacing:.04em;color:var(--cream-dim)}
+.modes button[aria-selected="true"]{background:var(--signal);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 2px 6px rgba(0,0,0,.4)}
+.top-actions{display:flex;gap:8px}
+.chip-btn{border:1px solid rgba(240,228,200,.18);background:var(--bakelite);border-radius:8px;padding:7px 12px;font-size:.85rem;font-weight:600}
+.chip-btn:hover{background:var(--bakelite-3)}
+.chip-btn[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+
+/* Panels */
+.panel{position:absolute;top:calc(74px + env(safe-area-inset-top,0px));bottom:16px;width:310px;overflow:auto;
+  background:linear-gradient(180deg,#241b17,var(--bakelite));border-radius:14px;padding:14px 14px 18px;
+  box-shadow:0 1px 0 rgba(255,240,210,.08) inset,0 18px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+.panel > *{flex-shrink:0}
+#buildPanel{left:16px}
+#playPanel{right:16px;bottom:auto;max-height:calc(100% - 90px - env(safe-area-inset-top,0px))}
+.tape{align-self:flex-start;font-family:var(--mono);font-weight:700;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+  color:#f6f2ea;background:var(--tape-black);padding:4px 10px 3px;border-radius:2px;transform:rotate(-.8deg);
+  text-shadow:0 1px 0 rgba(0,0,0,.8),0 -1px 0 rgba(255,255,255,.28);box-shadow:0 1px 2px rgba(0,0,0,.6);
+  background-image:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.15))}
+.tape.red{background-color:var(--tape-red)}
+.tape.blue{background-color:var(--tape-blue)}
+.hint{margin:0;color:var(--cream-dim);font-size:.84rem;line-height:1.4}
+.hint b{color:var(--cream)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.part{display:flex;gap:8px;align-items:center;text-align:left;border:1px solid rgba(240,228,200,.1);background:var(--bakelite-2);
+  border-radius:8px;padding:6px 8px;min-width:0}
+.part:hover{background:var(--bakelite-3)}
+.part[aria-pressed="true"]{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset}
+.part svg{flex:none;width:30px;height:30px}
+.part span{display:flex;flex-direction:column;min-width:0}
+.part b{font-weight:600;font-size:.82rem;line-height:1.15}
+.part small{font-family:var(--mono);font-size:.62rem;color:var(--cream-dim);letter-spacing:.02em;line-height:1.2}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.btn{border:1px solid rgba(240,228,200,.14);background:var(--bakelite-2);border-radius:8px;padding:7px 10px;font-size:.82rem;font-weight:600}
+.btn:hover{background:var(--bakelite-3)}
+.btn.warn{border-color:rgba(210,67,44,.6)}
+.btn.armed{background:var(--signal);color:#fff}
+kbd{font-family:var(--mono);font-size:.68rem;padding:0 4px;border-radius:3px;background:rgba(0,0,0,.4);color:var(--cream-dim);margin-left:4px}
+.seg{display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(240,228,200,.14)}
+.seg button{flex:1;border:0;background:var(--bakelite-2);padding:7px 6px;font-size:.8rem;font-weight:600;color:var(--cream-dim)}
+.seg button + button{border-left:1px solid rgba(240,228,200,.1)}
+.seg button[aria-pressed="true"]{background:var(--cream);color:var(--bakelite)}
+.parts-list{font-family:var(--mono);font-size:.72rem;color:var(--cream-dim);line-height:1.6;font-variant-numeric:tabular-nums}
+.parts-list strong{color:var(--cream);font-weight:700}
+
+/* Controller */
+.controller{background:linear-gradient(160deg,#3b2a22,#1a120e);border-radius:12px;padding:12px;
+  box-shadow:inset 0 1px 0 rgba(255,240,210,.12),inset 0 -2px 6px rgba(0,0,0,.6),0 3px 0 #0b0706;display:flex;flex-direction:column;gap:10px}
+.plate{font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;color:#d9cfb8;text-align:center;
+  background:linear-gradient(180deg,#bfb39a,#8f846c);color:#231a14;border-radius:3px;padding:4px 6px;font-weight:700;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 1px 1px rgba(0,0,0,.6)}
+.knob-wrap{display:flex;justify-content:center}
+#knob{width:190px;height:190px;touch-action:none;cursor:grab;max-width:100%}
+#knob:active{cursor:grabbing}
+#knob:focus{outline:none}
+#knob:focus-visible{outline:2px solid var(--brass);outline-offset:-2px;border-radius:50%}
+.readouts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.meter{background:#0e0a08;border-radius:6px;padding:6px 8px;box-shadow:inset 0 1px 4px rgba(0,0,0,.8)}
+.meter .lbl{display:block;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim)}
+.meter .val{font-family:var(--mono);font-weight:700;font-size:1.15rem;color:#ffb347;font-variant-numeric:tabular-nums;text-shadow:0 0 8px rgba(255,160,40,.35)}
+.dir{display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;color:var(--cream-dim)}
+.toggle{width:74px;height:34px;border-radius:17px;border:0;background:#0e0a08;position:relative;box-shadow:inset 0 2px 5px rgba(0,0,0,.9)}
+.toggle::after{content:"";position:absolute;top:4px;left:4px;width:26px;height:26px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff5dd,#b9ab8c 60%,#6f6452);transition:left .15s;box-shadow:0 2px 3px rgba(0,0,0,.6)}
+.toggle[aria-pressed="true"]::after{left:44px}
+.dir .on{color:var(--brass)}
+.ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.ctl-row .btn{text-align:center}
+.btn.horn{background:var(--signal);color:#fff;border-color:transparent}
+select{width:100%;background:var(--bakelite-2);border:1px solid rgba(240,228,200,.14);border-radius:8px;padding:7px 8px;font-size:.85rem}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim)}
+.tally{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;font-variant-numeric:tabular-nums}
+.tally dt{color:var(--cream-dim)}
+.tally dd{margin:0;font-family:var(--mono);font-weight:700;text-align:right}
+.train-card{font-size:.8rem;color:var(--cream-dim);line-height:1.45;margin:0}
+
+/* Point chips over the 3D view */
+#chips{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.pchip{position:absolute;transform:translate(-50%,-130%);pointer-events:auto;border:0;border-radius:6px;padding:3px 7px 3px 6px;
+  font-family:var(--mono);font-weight:700;font-size:.7rem;letter-spacing:.06em;color:#fff;background:var(--tape-blue);
+  box-shadow:0 2px 6px rgba(0,0,0,.5);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.pchip.branch{background:var(--tape-red)}
+.pchip svg{width:14px;height:14px}
+
+/* Toasts */
+#toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(92vw,520px)}
+.toast{background:rgba(20,14,11,.92);border:1px solid rgba(240,228,200,.16);border-radius:10px;padding:8px 14px;font-size:.9rem;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tin .2s ease-out;text-align:center}
+.toast.bad{border-color:var(--signal)}
+.toast.good{border-color:var(--ok)}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Modal */
+.modal{position:absolute;inset:0;background:rgba(10,7,5,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.sheet{background:linear-gradient(180deg,#2a201b,#1c1512);border-radius:14px;max-width:680px;width:100%;max-height:100%;overflow:auto;
+  padding:22px 22px 18px;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,240,210,.1)}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:1.7rem;margin:0 0 4px;text-wrap:balance}
+.sheet h3{font-family:var(--ui);font-weight:700;font-size:1rem;margin:18px 0 6px;color:var(--brass)}
+.sheet p,.sheet li{color:#dccfb3;line-height:1.5;max-width:65ch}
+.sheet ul,.sheet ol{padding-left:1.2em;margin:6px 0}
+.sheet a{color:#9ec5ff}
+.sheet .close-row{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;position:sticky;bottom:-18px;padding-block:10px;background:linear-gradient(to top,#1c1512 70%,transparent)}
+.sheet .btn.primary{background:var(--signal);color:#fff;border-color:transparent;padding:9px 16px;font-size:.95rem}
+.src{font-size:.82rem}
+.src li{margin-bottom:6px}
+
+#loadErr{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center}
+
+@media (max-width:760px){
+  .brand-sub{display:none}
+  .brand-name{font-size:1.15rem}
+  .panel{top:auto;left:0 !important;right:0 !important;bottom:0;width:auto;max-height:46%;border-radius:14px 14px 0 0;
+    padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px))}
+  #playPanel{bottom:0;max-height:52%}
+  #knob{width:150px;height:150px}
+  .grid{grid-template-columns:1fr 1fr}
+  #toast{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px))}
+}
+@media (prefers-reduced-motion:reduce){ .toast{animation:none} .toggle::after{transition:none} }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="scene" tabindex="0" aria-label="3D view of the train set board"></canvas>
+  <div id="chips"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-name">Chipboard Junction</span>
+      <span class="brand-sub">HO 1:87 · 16.5 mm gauge · 2400 × 1200 mm board</span>
+    </div>
+    <div class="modes" role="tablist" aria-label="Mode">
+      <button id="modeBuild" role="tab" aria-selected="true">Build</button>
+      <button id="modePlay" role="tab" aria-selected="false">Play</button>
+    </div>
+    <div class="top-actions">
+      <button id="btnSound" class="chip-btn" aria-pressed="false">Sound off</button>
+      <button id="btnGuide" class="chip-btn">Guide</button>
+    </div>
+  </header>
+
+  <aside id="buildPanel" class="panel" aria-label="Build tray">
+    <span class="tape">Track</span>
+    <p class="hint" id="buildHint">Pieces join at the <b>yellow arrow</b>. Click a white arrow to build from another open end.</p>
+    <div class="grid" id="trackGrid"></div>
+    <div class="row">
+      <button class="btn" id="bFlip" title="Flip the last piece you laid">Flip last<kbd>F</kbd></button>
+      <button class="btn" id="bUndo">Undo<kbd>Z</kbd></button>
+      <button class="btn" id="bDel">Delete selected<kbd>Del</kbd></button>
+      <button class="btn" id="bStart">New start point</button>
+    </div>
+    <span class="tape red">Scenery</span>
+    <p class="hint">Pick an item, then click the board to place it. Platforms and the goods shed snap alongside the track. Drag a selected item to move it.</p>
+    <div class="grid" id="scenGrid"></div>
+    <div class="row">
+      <button class="btn" id="bRot">Rotate 15°<kbd>R</kbd></button>
+      <button class="btn" id="bDone">Stop placing<kbd>Esc</kbd></button>
+    </div>
+    <span class="tape blue">Board</span>
+    <div class="seg" id="finishSeg" role="group" aria-label="Board finish">
+      <button data-finish="chipboard">Bare chipboard</button>
+      <button data-finish="paint">Painted green</button>
+      <button data-finish="mat">Grass mat</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="bSample">Load township layout</button>
+      <button class="btn warn" id="bClear">Clear board</button>
+    </div>
+    <span class="tape">Parts list</span>
+    <div class="parts-list" id="partsList"></div>
+  </aside>
+
+  <aside id="playPanel" class="panel" aria-label="Power controller" hidden>
+    <div class="controller">
+      <div class="plate">POWER CONTROLLER · 12 V DC</div>
+      <div class="knob-wrap">
+        <svg id="knob" viewBox="0 0 200 200" role="slider" tabindex="0" aria-label="Speed" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"></svg>
+      </div>
+      <div class="readouts">
+        <div class="meter"><span class="lbl">Track volts</span><span class="val" id="volts">0.0 V</span></div>
+        <div class="meter"><span class="lbl">Scale speed</span><span class="val" id="kmh">0 km/h</span></div>
+      </div>
+      <div class="dir"><span id="dirF" class="on">FWD</span><button class="toggle" id="dirSwitch" aria-pressed="false" aria-label="Direction: forward"></button><span id="dirR">REV</span></div>
+      <div class="ctl-row">
+        <button class="btn horn" id="bHorn">Horn<kbd>H</kbd></button>
+        <button class="btn" id="bStop">Off<kbd>Space</kbd></button>
+        <button class="btn" id="bRerail">Re-rail</button>
+      </div>
+    </div>
+    <span class="tape">Train</span>
+    <div class="field"><label for="selLoco">Locomotive</label>
+      <select id="selLoco">
+        <option value="44">NSW 44 class diesel (Indian red)</option>
+        <option value="c38">NSW C38 class 4-6-2 steam (green)</option>
+      </select></div>
+    <div class="field"><label for="selConsist">Consist</label>
+      <select id="selConsist">
+        <option value="pass">Passenger: 3 carriages</option>
+        <option value="goods">Goods: 4 wagons + brake van</option>
+        <option value="light">Light engine</option>
+      </select></div>
+    <p class="train-card" id="trainCard"></p>
+    <span class="tape red">View</span>
+    <div class="seg" id="viewSeg" role="group" aria-label="Camera">
+      <button data-view="orbit">Orbit</button>
+      <button data-view="follow">Follow</button>
+      <button data-view="cab">Cab ride</button>
+    </div>
+    <span class="tape blue">Tally</span>
+    <dl class="tally">
+      <dt>Passengers delivered</dt><dd id="tDeliv">0</dd>
+      <dt>On board now</dt><dd id="tOn">0</dd>
+      <dt>Goods loads handled</dt><dd id="tGoods">0</dd>
+      <dt>Derailments</dt><dd id="tDerail">0</dd>
+    </dl>
+    <p class="hint">Stop with the carriages alongside a platform to pick up and set down passengers. Stop a goods wagon at the goods shed to load or unload. Click a blue <b>P</b> tag to throw a point.</p>
+  </aside>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <div id="guide" class="modal" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <h2 id="guideTitle">Chipboard Junction</h2>
+      <p>An 8 × 4 sheet of particle board on trestles, a box of sectional track, a controller and a Saturday afternoon. Build the layout, then run it.</p>
+      <h3>Building</h3>
+      <ol>
+        <li>Choose a track piece. It clips on at the yellow arrow, just like real sectional track.</li>
+        <li>Curves come in 1st radius (371 mm) and 2nd radius (438 mm). Sixteen curves make a full circle.</li>
+        <li><b>Flip last</b> swaps a curve left/right, or turns a point around so you can join into it from the other end.</li>
+        <li>When two ends meet within a few millimetres they join automatically, the way real sectional track has a little play in the joiners.</li>
+        <li>Add platforms, a station, houses, gum trees and a hill with a tunnel. Drag, rotate or delete anything you have placed.</li>
+      </ol>
+      <h3>Playing</h3>
+      <ol>
+        <li>Turn on <b>Sound</b>, switch to <b>Play</b> and turn the controller knob. Like a real DC motor, nothing happens until the volts get past about 2 V.</li>
+        <li>Take the curves flat out and the train will tip over, just like the real thing. Running off an open end or hitting the buffers too hard also ends badly.</li>
+        <li>Changing a point under a moving train splits it and derails it. Only throw points ahead of or behind the train.</li>
+        <li>Try <b>Cab ride</b> for a driver's-eye view through the township and the tunnel.</li>
+      </ol>
+      <p>Keys: <kbd>↑</kbd><kbd>↓</kbd> speed, <kbd>Space</kbd> off, <kbd>D</kbd> direction, <kbd>H</kbd> horn, <kbd>C</kbd> camera. Drag to orbit, right-drag or shift-drag to pan, scroll or pinch to zoom.</p>
+
+      <h3>What is real in this game</h3>
+      <ul class="src">
+        <li>Track geometry follows Hornby/Peco "Setrack" style sectional track: 16.5 mm gauge, 168 mm standard straight, 1st radius 371 mm, 2nd radius 438 mm, 22.5° per curve, 67 mm between parallel tracks, 22.5° points. Sources: <a href="https://jonscaife.com/track-geometries-for-00-gauge-hornby-setrack/" target="_blank" rel="noopener">Jon Scaife, Track geometries for Hornby SeTrack</a>; <a href="https://www.hobbyco.com.au/blogs/blog/hornby-and-peco-track-sizes" target="_blank" rel="noopener">Hobbyco, Hornby and Peco track sizes</a>.</li>
+        <li>That geometry dates back to Tri-ang's Super 4 track of 1962 and the System 6 track sold through the 1970s. Sources: <a href="https://www.modelrailforum.com/threads/triang-hornby.28234/" target="_blank" rel="noopener">Model Railway Forum</a>; <a href="https://www.rmweb.co.uk/topic/166370-triang-track-turnouts-and-motors-for-a-retro-layout/" target="_blank" rel="noopener">RMweb</a>.</li>
+        <li>Lima entered the Australian market in 1970 and made NSW 38, 42, 44 and 422 class models, Victorian S and B class, the SA 930 class and Commonwealth Railways stainless steel carriages. Source: <a href="https://en.wikipedia.org/wiki/Lima_(models)" target="_blank" rel="noopener">Wikipedia, Lima (models)</a>.</li>
+        <li>The NSW 44 class: 100 Alco-design Co-Co diesel-electrics built by AE Goodwin, Auburn, 1957 to 1967; 17.81 m over couplers; 80 mph (129 km/h). The model here is 205 mm long, which is 17.81 m at 1:87. Source: <a href="https://en.wikipedia.org/wiki/New_South_Wales_44_class_locomotive" target="_blank" rel="noopener">Wikipedia, NSW 44 class</a>.</li>
+        <li>The NSW C38 class: 30 Pacific (4-6-2) express passenger engines built 1943 to 1949; later repainted bottle green, with 3801 and 3830 returned to green in the 1960s. Source: <a href="https://en.wikipedia.org/wiki/New_South_Wales_C38_class_locomotive" target="_blank" rel="noopener">Wikipedia, NSW C38 class</a>.</li>
+        <li>HO is 1:87 and British OO is 1:76.2; both run on the same 16.5 mm track. Source: <a href="https://en.wikipedia.org/wiki/OO_gauge" target="_blank" rel="noopener">Wikipedia, OO gauge</a>.</li>
+        <li>Particle board is sold in 2400 × 1200 mm sheets (the old 8 ft × 4 ft), commonly 16 mm thick. Source: <a href="https://blog.plyco.com.au/particle-board-dimensions" target="_blank" rel="noopener">Plyco, particle board dimensions</a>.</li>
+        <li>Controllers of the era turned mains power into a 12 V DC track supply; the knob sets the voltage. Source: <a href="https://community.hornbyhobbies.com/forums/topic/23916-advice-needed-should-i-replace-my-hm-duette-controller/" target="_blank" rel="noopener">Hornby Hobbies forum on the H&amp;M Duette</a>.</li>
+      </ul>
+      <h3>What is simplified</h3>
+      <p class="src">Buildings, carriages and wagons are generic period-style models, not copies of particular kits or prototypes. The C38 is drawn in non-streamlined form. Speeds, tip-over limits and sounds are tuned to feel like a 1970s toy train rather than measured from one. Scale speed is shown as HO: model speed × 87.</p>
+      <div class="close-row"><button class="btn primary" id="guideClose">Start building</button></div>
+    </div>
+  </div>
+  <div id="loadErr" hidden>
+    <p>The 3D engine could not load. Check your connection and reload the page.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+if (!window.THREE) { document.getElementById('loadErr').hidden = false; return; }
+
+/* =========================================================================
+   Constants (all lengths in millimetres, model scale)
+   ========================================================================= */
+const DEG = Math.PI / 180;
+const R1 = 371, R2 = 438, ANG = 22.5 * DEG;   // Setrack radii and curve angle
+const RAIL_OFF = 8.75;       // rail centre from track centre (16.5 mm gauge + 1 mm head)
+const RAIL_TOP = 4.5;        // sleeper (2 mm) + code 100 rail (2.5 mm)
+const SLEEPER_LEN = 29.5;    // 67 mm spacing less 37.5 mm gap
+const SCALE = 87;            // HO
+const BOARD_W = 2400, BOARD_D = 1200, BOARD_T = 16, TABLE_H = 760;
+const TOL_POS = 4, TOL_ANG = 3 * DEG;
+const VMAX = 650;            // model mm/s at 12 V
+const KMH = SCALE * 3.6 / 1000; // mm/s model -> km/h scale
+
+const $ = (s) => document.querySelector(s);
+const rnd = Math.random;
+function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function rot(x, y, h){ const c = Math.cos(h), s = Math.sin(h); return [x * c - y * s, x * s + y * c]; }
+function normAng(a){ while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
+function clamp(v, a, b){ return v < a ? a : v > b ? b : v; }
+function store(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+function load(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+/* =========================================================================
+   Track pieces. Every route starts at end 0; route i ends at end i+1.
+   Coordinates: x east, y north (maths), heading anticlockwise from east.
+   ========================================================================= */
+const L_ = (len) => ({ t: 'L', len });
+const A_ = (r, a) => ({ t: 'A', r, a });
+const PIECES = {
+  straight: { name: 'Straight', sub: '168 mm', segs: [[L_(168)]] },
+  double:   { name: 'Double straight', sub: '335 mm', segs: [[L_(335)]] },
+  short:    { name: 'Short straight', sub: '38 mm', segs: [[L_(38)]] },
+  c1L: { name: 'Curve left', sub: '1st rad 371 · 22.5°', segs: [[A_(R1, ANG)]], flip: 'c1R' },
+  c1R: { name: 'Curve right', sub: '1st rad 371 · 22.5°', segs: [[A_(R1, -ANG)]], flip: 'c1L' },
+  c2L: { name: 'Curve left', sub: '2nd rad 438 · 22.5°', segs: [[A_(R2, ANG)]], flip: 'c2R' },
+  c2R: { name: 'Curve right', sub: '2nd rad 438 · 22.5°', segs: [[A_(R2, -ANG)]], flip: 'c2L' },
+  pointL: { name: 'Point, left', sub: '168 + 438 rad branch', segs: [[L_(168)], [A_(R2, ANG)]], point: true },
+  pointR: { name: 'Point, right', sub: '168 + 438 rad branch', segs: [[L_(168)], [A_(R2, -ANG)]], point: true },
+  crossing: { name: 'Level crossing', sub: '168 mm', segs: [[L_(168)]], crossing: true },
+  buffer: { name: 'Buffer stop', sub: 'end of line', segs: [[L_(110)]], buffer: true },
+};
+function buildRoute(segs){
+  let x = 0, y = 0, h = 0, acc = 0; const parts = [];
+  for (const g of segs){
+    const len = g.t === 'L' ? g.len : Math.abs(g.a) * g.r;
+    parts.push({ g, x, y, h, s0: acc, len });
+    if (g.t === 'L'){ x += Math.cos(h) * g.len; y += Math.sin(h) * g.len; }
+    else { const sg = Math.sign(g.a); const cx = x - Math.sin(h) * g.r * sg, cy = y + Math.cos(h) * g.r * sg; h += g.a; x = cx + Math.sin(h) * g.r * sg; y = cy - Math.cos(h) * g.r * sg; }
+    acc += len;
+  }
+  return { parts, len: acc, end: { x, y, h } };
+}
+for (const [key, d] of Object.entries(PIECES)){
+  d.key = key;
+  d.routes = d.segs.map(buildRoute);
+  d.ends = [{ x: 0, y: 0, h: Math.PI }].concat(d.routes.map(r => ({ x: r.end.x, y: r.end.y, h: r.end.h })));
+}
+function routePose(route, s){
+  s = clamp(s, 0, route.len);
+  let part = route.parts[route.parts.length - 1];
+  for (const p of route.parts){ if (s <= p.s0 + p.len){ part = p; break; } }
+  const t = s - part.s0, g = part.g;
+  if (g.t === 'L') return { x: part.x + Math.cos(part.h) * t, y: part.y + Math.sin(part.h) * t, h: part.h, k: 0 };
+  const sg = Math.sign(g.a), cx = part.x - Math.sin(part.h) * g.r * sg, cy = part.y + Math.cos(part.h) * g.r * sg;
+  const h = part.h + sg * t / g.r;
+  return { x: cx + Math.sin(h) * g.r * sg, y: cy - Math.cos(h) * g.r * sg, h, k: sg / g.r };
+}
+function worldPose(p, lp){ const [x, y] = rot(lp.x, lp.y, p.h); return { x: p.x + x, y: p.y + y, h: p.h + lp.h, k: lp.k || 0 }; }
+function sampleRoute(route, step){ const n = Math.max(1, Math.ceil(route.len / step)); const out = []; for (let i = 0; i <= n; i++) out.push(routePose(route, route.len * i / n)); return out; }
+
+/* =========================================================================
+   Layout state
+   ========================================================================= */
+const L = { pieces: [], scenery: [], nextId: 1, finish: 'chipboard' };
+let active = null;          // {kind:'end', id, end} | {kind:'free', x, y, h}
+let lastAdd = null;         // for Flip
+let history = [];
+let selected = null;        // {kind:'piece'|'scenery', id}
+let tool = null;            // {kind:'scenery', type} | {kind:'start'}
+let placeRot = 0;
+let mode = 'build';
+
+const byId = (id) => L.pieces.find(p => p.id === id);
+const scById = (id) => L.scenery.find(s => s.id === id);
+function endPose(p, i){ return worldPose(p, PIECES[p.type].ends[i]); }
+function addPiece(type, conn, k){
+  const d = PIECES[type], e = d.ends[k || 0];
+  const h = conn.h + Math.PI - e.h; const [ox, oy] = rot(e.x, e.y, h);
+  const p = { id: L.nextId++, type, x: conn.x - ox, y: conn.y - oy, h: normAng(h), state: 0 };
+  L.pieces.push(p); return p;
+}
+function serialize(){
+  return JSON.stringify({ v: 1, nextId: L.nextId, finish: L.finish,
+    pieces: L.pieces.map(p => ({ id: p.id, type: p.type, x: +p.x.toFixed(3), y: +p.y.toFixed(3), h: +p.h.toFixed(6), state: p.state })),
+    scenery: L.scenery.map(s => ({ id: s.id, type: s.type, x: +s.x.toFixed(2), y: +s.y.toFixed(2), h: +s.h.toFixed(5), name: s.name })),
+    active });
+}
+function deserialize(str){
+  const o = JSON.parse(str);
+  L.pieces = (o.pieces || []).filter(p => PIECES[p.type]);
+  L.scenery = (o.scenery || []).filter(s => SCEN[s.type]);
+  L.nextId = o.nextId || 1 + Math.max(0, ...L.pieces.map(p => p.id), ...L.scenery.map(s => s.id));
+  L.finish = o.finish || 'chipboard';
+  active = o.active || null;
+}
+function pushHistory(){ history.push(serialize()); if (history.length > 120) history.shift(); }
+
+/* Connections */
+let openEnds = [];
+function solveConnections(){
+  const ends = [];
+  for (const p of L.pieces){
+    p.def = PIECES[p.type]; p.conn = p.def.ends.map(() => null);
+    p.def.ends.forEach((e, i) => { if (p.def.buffer && i === 1) return; const w = worldPose(p, e); ends.push({ p, i, x: w.x, y: w.y, h: w.h }); });
+  }
+  for (let a = 0; a < ends.length; a++) for (let b = a + 1; b < ends.length; b++){
+    const A = ends[a], B = ends[b];
+    if (A.p === B.p || A.p.conn[A.i] || B.p.conn[B.i]) continue;
+    if (Math.abs(A.x - B.x) > TOL_POS || Math.abs(A.y - B.y) > TOL_POS) continue;
+    if (Math.hypot(A.x - B.x, A.y - B.y) > TOL_POS) continue;
+    if (Math.abs(normAng(A.h - B.h - Math.PI)) > TOL_ANG) continue;
+    A.p.conn[A.i] = { p: B.p, e: B.i }; B.p.conn[B.i] = { p: A.p, e: A.i };
+  }
+  openEnds = ends.filter(e => !e.p.conn[e.i]);
+}
+function activePose(){
+  if (!active) return null;
+  if (active.kind === 'free') return { x: active.x, y: active.y, h: active.h };
+  const p = byId(active.id); if (!p || !p.conn || p.conn[active.end]) return null;
+  return endPose(p, active.end);
+}
+function ensureActive(){
+  if (activePose()) return;
+  if (!L.pieces.length){ active = { kind: 'free', x: -600, y: -380, h: 0 }; return; }
+  const o = openEnds[openEnds.length - 1];
+  active = o ? { kind: 'end', id: o.p.id, end: o.i } : null;
+}
+
+/* =========================================================================
+   Renderer, scene, camera
+   ========================================================================= */
+const canvas = $('#scene');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) { $('#loadErr').hidden = false; $('#loadErr p').textContent = 'This browser could not start WebGL, which the 3D board needs.'; return; }
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1d1612);
+scene.fog = new THREE.Fog(0x1d1612, 5000, 11000);
+const camera = new THREE.PerspectiveCamera(40, 1, 5, 20000);
+const hemi = new THREE.HemisphereLight(0xfff1dc, 0x3a2a1e, 0.5); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffe4bd, 0.72);
+sun.position.set(-900, 2400, 1300); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -1500, right: 1500, top: 1000, bottom: -1000, near: 100, far: 6000 });
+sun.shadow.bias = -0.0006;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xbfd4ff, 0.22); fill.position.set(1500, 900, -1200); scene.add(fill);
+
+const world = new THREE.Group(); scene.add(world);
+const trackGroup = new THREE.Group(); world.add(trackGroup);
+const markerGroup = new THREE.Group(); world.add(markerGroup);
+const scenGroup = new THREE.Group(); world.add(scenGroup);
+const trainGroup = new THREE.Group(); world.add(trainGroup);
+const fxGroup = new THREE.Group(); world.add(fxGroup);
+
+/* ---------- procedural textures ---------- */
+function canvasTex(w, h, draw, repeat){
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  if (repeat){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
+  return t;
+}
+function speckle(base, flecks, n, maxW, maxH){
+  return (g, w, h) => {
+    g.fillStyle = base; g.fillRect(0, 0, w, h);
+    const r = rng(n);
+    for (let i = 0; i < n; i++){
+      const x = r() * w, y = r() * h, fw = 1 + r() * maxW, fh = 1 + r() * maxH;
+      g.globalAlpha = 0.3 + r() * 0.55; g.fillStyle = flecks[(r() * flecks.length) | 0];
+      g.save(); g.translate(x, y); g.rotate(r() * Math.PI); g.fillRect(-fw / 2, -fh / 2, fw, fh); g.restore();
+    }
+    g.globalAlpha = 1;
+  };
+}
+const TEX = {
+  chipboard: canvasTex(1024, 1024, speckle('#b58f5e', ['#8f6a3c', '#cfb07c', '#7a5530', '#dcc393', '#a27b4b', '#6b4c2a'], 34000, 5, 2.4), [4, 2]),
+  paint: canvasTex(1024, 1024, speckle('#4d6a38', ['#435e30', '#5a7a43', '#3c542b', '#64854c', '#557340'], 16000, 5, 2.2), [4, 2]),
+  mat: canvasTex(1024, 1024, speckle('#5c8a3a', ['#6c9b44', '#4b7430', '#7fae52', '#527d35', '#8cb95c', '#44692b'], 60000, 2, 1.5), [5, 2.5]),
+  edge: canvasTex(256, 64, speckle('#b79466', ['#8e6c41', '#d2b27f', '#6f512e'], 3000, 3, 2), [12, 1]),
+  carpet: canvasTex(512, 512, speckle('#5b3a22', ['#6e4a2c', '#4a2f1b', '#7c5434', '#3d2615', '#86603b'], 40000, 2, 2), [30, 30]),
+};
+
+/* ---------- material helpers ---------- */
+const matCache = new Map();
+function mat(color, o){
+  const key = color + JSON.stringify(o || {});
+  if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.82, metalness: 0.02 }, o || {})));
+  return matCache.get(key);
+}
+function mesh(geo, m, shadow){ const x = new THREE.Mesh(geo, m); if (shadow !== false){ x.castShadow = true; x.receiveShadow = true; } return x; }
+function box(w, h, d, color, o){ return mesh(new THREE.BoxGeometry(w, h, d), typeof color === 'number' || typeof color === 'string' ? mat(color, o) : color); }
+function at(parent, obj, x, y, z, ry){ obj.position.set(x, y, z); if (ry) obj.rotation.y = ry; parent.add(obj); return obj; }
+function cyl(rt, rb, h, color, seg, o){ return mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 16), typeof color === 'object' ? color : mat(color, o)); }
+function prism(len, depth, rise, m){
+  const s = new THREE.Shape(); s.moveTo(-depth / 2, 0); s.lineTo(depth / 2, 0); s.lineTo(0, rise); s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false }); g.translate(0, 0, -len / 2); g.rotateY(Math.PI / 2);
+  return mesh(g, m);
+}
+function stripes(base, line, horizontal, step, w, h){
+  return canvasTex(w || 128, h || 128, (g, W, H) => {
+    g.fillStyle = base; g.fillRect(0, 0, W, H); g.fillStyle = line;
+    for (let i = 0; i < (horizontal ? H : W); i += step){ if (horizontal) g.fillRect(0, i, W, 1.5); else g.fillRect(i, 0, 1.5, H); }
+  }, [1, 1]);
+}
+const texMat = new Map();
+function tmat(key, make, o){ if (!texMat.has(key)) texMat.set(key, new THREE.MeshStandardMaterial(Object.assign({ map: make(), roughness: 0.85 }, o || {}))); return texMat.get(key); }
+const M = {
+  weather: (c) => tmat('wb' + c, () => stripes(c, 'rgba(0,0,0,0.22)', true, 8)),
+  corr: (c) => tmat('co' + c, () => stripes(c, 'rgba(0,0,0,0.25)', false, 6), { metalness: 0.2, roughness: 0.6 }),
+  brick: (c) => tmat('br' + c, () => canvasTex(128, 128, (g, W, H) => {
+    g.fillStyle = c; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(230,220,200,0.35)';
+    for (let y = 0; y < H; y += 8){ g.fillRect(0, y, W, 1.2); for (let x = (y / 8 % 2) * 8; x < W; x += 16) g.fillRect(x, y, 1.2, 8); }
+    const r = rng(7); for (let i = 0; i < 90; i++){ g.fillStyle = `rgba(0,0,0,${r() * 0.18})`; g.fillRect(r() * W, r() * H, 14, 7); }
+  }, [1, 1])),
+  tile: (c) => tmat('ti' + c, () => stripes(c, 'rgba(0,0,0,0.3)', true, 6)),
+};
+function signMat(text, bg, fg, w, h){
+  return tmat('sign' + text + bg + fg, () => canvasTex(w || 256, h || 48, (g, W, H) => {
+    g.fillStyle = bg; g.fillRect(0, 0, W, H); g.fillStyle = fg; g.font = `700 ${Math.round(H * 0.56)}px Barlow, Arial, sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, W / 2, H / 2 + 1);
+    g.strokeStyle = fg; g.lineWidth = 3; g.strokeRect(3, 3, W - 6, H - 6);
+  }));
+}
+
+/* =========================================================================
+   Board, trestles, floor
+   ========================================================================= */
+const boardTopMat = new THREE.MeshStandardMaterial({ map: TEX.chipboard, roughness: 0.95 });
+const edgeMat = new THREE.MeshStandardMaterial({ map: TEX.edge, roughness: 0.95 });
+const board = mesh(new THREE.BoxGeometry(BOARD_W, BOARD_T, BOARD_D), [edgeMat, edgeMat, boardTopMat, edgeMat, edgeMat, edgeMat]);
+board.position.y = -BOARD_T / 2; board.castShadow = false; world.add(board);
+const matSheet = mesh(new THREE.PlaneGeometry(BOARD_W - 40, BOARD_D - 40), new THREE.MeshStandardMaterial({ map: TEX.mat, roughness: 1 }), false);
+matSheet.rotation.x = -Math.PI / 2; matSheet.position.y = 0.4; matSheet.receiveShadow = true; world.add(matSheet);
+(function trestles(){
+  const wood = mat(0x6b4a2c, { roughness: 0.9 });
+  for (const sx of [-1, 1]){
+    const x = sx * (BOARD_W / 2 - 260);
+    for (const sz of [-1, 1]) at(world, box(40, TABLE_H - BOARD_T, 40, wood), x + sz * 12, -BOARD_T - (TABLE_H - BOARD_T) / 2, sz * (BOARD_D / 2 - 120), 0).rotation.z = sz * 0.05;
+    at(world, box(60, 50, BOARD_D - 160, wood), x, -BOARD_T - 25, 0);
+    at(world, box(30, 30, BOARD_D - 260, wood), x, -TABLE_H + 180, 0);
+  }
+  for (const sz of [-1, 1]) at(world, box(BOARD_W - 80, 60, 30, wood), 0, -BOARD_T - 30, sz * (BOARD_D / 2 - 40));
+  const floor = mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshStandardMaterial({ map: TEX.carpet, roughness: 1 }), false);
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -TABLE_H; floor.receiveShadow = true; world.add(floor);
+})();
+function applyFinish(){
+  boardTopMat.map = L.finish === 'paint' ? TEX.paint : TEX.chipboard; boardTopMat.needsUpdate = true;
+  matSheet.visible = L.finish === 'mat';
+  document.querySelectorAll('#finishSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.finish === L.finish)));
+}
+
+/* =========================================================================
+   Track meshes
+   ========================================================================= */
+const sleeperGeo = new THREE.BoxGeometry(3.2, 2, SLEEPER_LEN);
+const sleeperMat = mat(0x2b2521, { roughness: 0.9 });
+const railMat = new THREE.MeshStandardMaterial({ color: 0xc9c7bf, metalness: 0.35, roughness: 0.38, side: THREE.DoubleSide });
+function ribbonGeom(samples, off0, off1, y0, y1){
+  const pos = [], idx = [];
+  samples.forEach((p) => {
+    const nx = -Math.sin(p.h), ny = Math.cos(p.h);
+    const ax = p.x + nx * off0, ay = p.y + ny * off0, bx = p.x + nx * off1, by = p.y + ny * off1;
+    pos.push(ax, y0, -ay, ax, y1, -ay, bx, y1, -by, bx, y0, -by);
+  });
+  for (let i = 0; i < samples.length - 1; i++){
+    const o = i * 4, n = o + 4;
+    for (const [u, v] of [[0, 1], [1, 2], [2, 3]]) idx.push(o + u, n + u, o + v, o + v, n + u, n + v);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+}
+const pieceMeshes = new Map();
+function pieceKey(p){ return p.id + ':' + p.type + ':' + p.x.toFixed(2) + ':' + p.y.toFixed(2) + ':' + p.h.toFixed(4); }
+function buildPieceMesh(p){
+  const d = PIECES[p.type], grp = new THREE.Group();
+  grp.position.set(p.x, 0, -p.y); grp.rotation.y = p.h; grp.userData.pieceId = p.id;
+  const sl = [];
+  d.routes.forEach((r, ri) => {
+    const n = Math.max(1, Math.round(r.len / 8.4));
+    for (let i = 0; i < n; i++){ const q = routePose(r, (i + 0.5) * r.len / n); if (ri > 0 && Math.abs(q.y) < 11) continue; sl.push(q); }
+  });
+  const im = new THREE.InstancedMesh(sleeperGeo, sleeperMat, sl.length);
+  const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), ps = new THREE.Vector3();
+  sl.forEach((q, i) => { qt.setFromAxisAngle(up, q.h); ps.set(q.x, 1, -q.y); m4.compose(ps, qt, one); im.setMatrixAt(i, m4); });
+  im.receiveShadow = true; grp.add(im);
+  const hlMat = new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0, depthWrite: false });
+  d.routes.forEach((r) => {
+    const smp = sampleRoute(r, 3);
+    for (const off of [-RAIL_OFF, RAIL_OFF]){ const rm = mesh(ribbonGeom(smp, off - 0.55, off + 0.55, 2, RAIL_TOP), railMat); rm.receiveShadow = false; grp.add(rm); }
+    const hit = new THREE.Mesh(ribbonGeom(smp, -19, 19, 5, 5), hlMat); hit.userData.pieceId = p.id; hit.userData.hit = true; hit.renderOrder = 2; grp.add(hit);
+  });
+  grp.userData.hl = hlMat;
+  if (d.point){
+    const side = d.key === 'pointL' ? -1 : 1;
+    at(grp, box(16, 5, 9, 0x262626), 26, 2.5, -side * 25);
+    const lever = new THREE.Group(); at(grp, lever, 26, 5, -side * 25);
+    at(lever, box(2.2, 9, 2.2, 0xc8342a), 0, 4.5, 0);
+    grp.userData.lever = lever; grp.userData.leverPos = new THREE.Vector3(26, 14, -side * 25);
+  }
+  if (d.crossing){
+    const road = mat(0x3d3b38, { roughness: 0.95 });
+    at(grp, box(52, 2.2, 14.5, road), 84, 3.3, 0);
+    for (const s of [-1, 1]) at(grp, box(52, 3.4, 26, road), 84, 2.7, s * 24);
+    grp.userData.lamps = [];
+    for (const s of [-1, 1]){
+      const post = new THREE.Group(); at(grp, post, 84 + s * 36, 0, s * 34);
+      at(post, cyl(1.2, 1.2, 46, 0xe8e2d0, 8), 0, 23, 0);
+      const bar = box(22, 3.5, 2, 0x111111); at(post, bar, 0, 34, s * -1.5);
+      const lampA = cyl(2.6, 2.6, 2, 0x330000, 12, { emissive: 0x000000 }); lampA.material = lampA.material.clone(); lampA.rotation.x = Math.PI / 2;
+      const lampB = lampA.clone(); lampB.material = lampA.material.clone();
+      at(post, lampA, -7, 34, -s * 2.5); at(post, lampB, 7, 34, -s * 2.5);
+      const x1 = box(28, 3, 1, 0xf5f2ea); x1.rotation.z = 0.6; at(post, x1, 0, 44, 0);
+      const x2 = box(28, 3, 1, 0xf5f2ea); x2.rotation.z = -0.6; at(post, x2, 0, 44, 0);
+      grp.userData.lamps.push(lampA, lampB);
+    }
+  }
+  if (d.buffer){
+    const L0 = d.routes[0].len;
+    at(grp, box(5, 9, 34, 0x7a2e1f), L0 - 4, 12, 0);
+    for (const s of [-1, 1]){ at(grp, box(4, 16, 4, 0x2a2a2a), L0 - 4, 8, s * 12); at(grp, cyl(2, 2, 5, 0xbbbbbb, 10), L0 - 9, 12, s * 10).rotation.z = Math.PI / 2; }
+    const brace = box(30, 3, 3, 0x2a2a2a); brace.rotation.z = -0.45; at(grp, brace, L0 - 16, 7, 0);
+  }
+  return grp;
+}
+function setLever(p){
+  const m = pieceMeshes.get(p.id); if (!m || !m.userData.lever) return;
+  m.userData.lever.rotation.x = (p.state ? 1 : -1) * 0.45 * (p.type === 'pointL' ? -1 : 1);
+}
+
+/* Open-end markers */
+const coneGeo = new THREE.ConeGeometry(7, 20, 16); coneGeo.rotateZ(-Math.PI / 2); coneGeo.translate(12, 0, 0);
+const markWhite = new THREE.MeshStandardMaterial({ color: 0xf2eee4, emissive: 0x333333 });
+const markYellow = new THREE.MeshStandardMaterial({ color: 0xffc933, emissive: 0x7a5500 });
+function rebuildMarkers(){
+  markerGroup.clear();
+  if (mode !== 'build') return;
+  const ap = activePose();
+  for (const o of openEnds){
+    const isActive = active && active.kind === 'end' && active.id === o.p.id && active.end === o.i;
+    const m = new THREE.Mesh(coneGeo, isActive ? markYellow : markWhite);
+    m.position.set(o.x, 10, -o.y); m.rotation.y = o.h; m.userData.marker = { id: o.p.id, end: o.i };
+    if (isActive) m.scale.setScalar(1.35);
+    markerGroup.add(m);
+  }
+  if (ap && active.kind === 'free'){
+    const m = new THREE.Mesh(coneGeo, markYellow); m.position.set(ap.x, 10, -ap.y); m.rotation.y = ap.h; m.scale.setScalar(1.5); markerGroup.add(m);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(14, 18, 32), new THREE.MeshBasicMaterial({ color: 0xffc933 })); ring.rotation.x = -Math.PI / 2; ring.position.set(ap.x, 1, -ap.y); markerGroup.add(ring);
+  }
+}
+
+/* Track samples for snapping, hills */
+let trackSamples = [];
+function rebuildSamples(){
+  trackSamples = [];
+  for (const p of L.pieces) p.def.routes.forEach((r) => sampleRoute(r, 10).forEach((q) => { const w = worldPose(p, q); trackSamples.push({ x: w.x, y: w.y, h: w.h }); }));
+}
+
+/* =========================================================================
+   Scenery
+   ========================================================================= */
+const PEOPLE_COLS = [0x2c4f86, 0xa33a2a, 0xd9b44a, 0x3f6b3a, 0x6d4c8a, 0xe6e0d0, 0x222222, 0xcc6f2d];
+function person(r){
+  const g = new THREE.Group();
+  at(g, cyl(1.6, 1.7, 9, 0x2a2a30, 8), 0, 4.5, 0);
+  at(g, cyl(2.2, 2.0, 8, PEOPLE_COLS[(r() * PEOPLE_COLS.length) | 0], 8), 0, 12.5, 0);
+  at(g, mesh(new THREE.SphereGeometry(2.1, 10, 8), mat(0xe0b08a)), 0, 18.3, 0);
+  if (r() < 0.4) at(g, cyl(2.8, 2.8, 0.6, 0x6b4a2c, 12), 0, 20, 0);
+  return g;
+}
+function gumTree(r){
+  const g = new THREE.Group(); const H = 110 + r() * 70;
+  const bark = mat(r() < 0.5 ? 0xd9d0bf : 0xb9a58a, { roughness: 1 });
+  at(g, cyl(1.8, 3.6, H * 0.7, bark, 8), 0, H * 0.35, 0);
+  const leafCols = [0x6f8a66, 0x7d9476, 0x5e7a58, 0x8a9c78];
+  for (let i = 0; i < 4; i++){
+    const a = r() * Math.PI * 2, len = 25 + r() * 20;
+    const br = cyl(0.9, 1.6, len, bark, 6); br.rotation.z = 0.8 + r() * 0.4; br.rotation.y = a;
+    at(g, br, Math.cos(a) * len * 0.3, H * (0.5 + r() * 0.25), -Math.sin(a) * len * 0.3);
+  }
+  for (let i = 0; i < 7; i++){
+    const rr = 16 + r() * 16;
+    const c = mesh(new THREE.IcosahedronGeometry(rr, 1), mat(leafCols[(r() * leafCols.length) | 0], { roughness: 1, flatShading: true }));
+    c.scale.set(1, 0.62, 1);
+    at(g, c, (r() - 0.5) * 60, H * (0.62 + r() * 0.38), (r() - 0.5) * 60);
+  }
+  return g;
+}
+function carModel(r){
+  const cols = [0xc2912e, 0x2e5d8a, 0xe8e2d2, 0x7a2a22, 0x4f7a3b, 0x8a6d3c, 0xd96f2b];
+  const c = cols[(r() * cols.length) | 0], g = new THREE.Group();
+  at(g, box(53, 8, 21, c, { metalness: 0.3, roughness: 0.4 }), 0, 7, 0);
+  at(g, box(26, 7, 19, c, { metalness: 0.3, roughness: 0.4 }), -3, 14.5, 0);
+  at(g, box(27, 5, 19.4, 0x1a2530, { roughness: 0.2 }), -3, 14.2, 0);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]){ const w = cyl(3.3, 3.3, 3, 0x111111, 12); w.rotation.x = Math.PI / 2; at(g, w, sx * 17, 3.3, sz * 9.5); }
+  at(g, box(1, 3, 18, 0xdddddd, { metalness: 0.6 }), 27, 6, 0);
+  return g;
+}
+function gable(g, w, d, wallH, rise, wallM, roofM, over){
+  over = over == null ? 5 : over;
+  at(g, box(w, wallH, d, wallM), 0, wallH / 2, 0);
+  const roof = prism(w + over * 2, d + over * 2, rise, roofM); at(g, roof, 0, wallH, 0);
+  return g;
+}
+function windows(g, w, y, z, n, hgt, col){
+  for (let i = 0; i < n; i++){ const x = -w / 2 + (i + 0.5) * w / n; at(g, box(7, hgt || 9, 1, col || 0x1e2a33, { roughness: 0.25 }), x, y, z); at(g, box(8.5, 1.2, 1.6, 0xefe9da), x, y - (hgt || 9) / 2 - 0.6, z); }
+}
+function verandah(g, w, depth, h, z, roofM, postCol){
+  const r = box(w, 1.2, depth, roofM); r.rotation.x = 0.12; at(g, r, 0, h, z + depth / 2);
+  for (let i = 0; i <= 4; i++) at(g, box(1.4, h, 1.4, postCol || 0xefe9da), -w / 2 + 2 + i * (w - 4) / 4, h / 2, z + depth - 1);
+}
+function platformModel(len, name){
+  const g = new THREE.Group();
+  at(g, box(len, 10, 45, M.brick('#9a4b33')), 0, 5, 0);
+  at(g, box(len, 1.4, 45.5, 0x7f7c77, { roughness: 1 }), 0, 10.7, 0);
+  at(g, box(len, 1.6, 3.2, 0xece6d4), 0, 10.9, 21.3);
+  for (let i = 0; i < Math.floor(len / 110); i++){
+    const x = -len / 2 + 55 + i * 110;
+    at(g, cyl(0.8, 0.8, 30, 0x2a4a38, 6), x, 26, -15);
+    at(g, box(5, 3, 5, 0xf7f0cf, { emissive: 0x554422 }), x, 42, -15);
+    at(g, box(18, 3, 5, 0x7a5a36), x + 30, 14, -14);
+  }
+  if (name){
+    const sb = new THREE.Group(); at(g, sb, 0, 11, -18);
+    for (const s of [-1, 1]) at(sb, cyl(0.9, 0.9, 20, 0x222222, 6), s * 24, 10, 0);
+    at(sb, box(56, 10, 1.2, signMat(name.toUpperCase(), '#f4efe2', '#1d2a44', 320, 56)), 0, 20, 0);
+  }
+  return g;
+}
+const SCEN = {
+  platform:    { name: 'Platform', sub: '335 mm', snap: 42.5, len: 335, build: (r, s) => platformModel(335, s.name) },
+  platformLong:{ name: 'Long platform', sub: '500 mm', snap: 42.5, len: 500, build: (r, s) => platformModel(500, s.name) },
+  station: { name: 'Station building', sub: 'with verandah', build: (r, s) => {
+    const g = new THREE.Group(); gable(g, 130, 44, 36, 20, M.weather('#e8dcb8'), M.corr('#8f3d2e'));
+    windows(g, 110, 22, 22.6, 5, 12); at(g, box(10, 20, 1, 0x5a3a24), 0, 10, 22.6);
+    verandah(g, 124, 24, 34, 22, M.corr('#8f3d2e'), 0x6b3a26);
+    at(g, box(8, 16, 8, M.brick('#8a3f2a')), 40, 50, -6);
+    at(g, box(60, 9, 1.2, signMat((s.name || 'HILLVIEW').toUpperCase(), '#f4efe2', '#1d2a44', 320, 56)), 0, 30, 22.8);
+    return g; } },
+  signalbox: { name: 'Signal box', sub: 'two storey', build: () => {
+    const g = new THREE.Group(); at(g, box(42, 24, 30, M.brick('#8e4631')), 0, 12, 0);
+    at(g, box(46, 20, 34, M.weather('#d9cfae')), 0, 34, 0); at(g, box(46.4, 9, 34.4, 0x1e2a33, { roughness: 0.2 }), 0, 36, 0);
+    at(g, prism(54, 42, 14, M.corr('#8a8f93')), 0, 44, 0); at(g, box(10, 2, 12, 0x2a2a2a), 28, 22, 0);
+    return g; } },
+  goodsshed: { name: 'Goods shed', sub: 'snaps to siding', snap: 52, build: () => {
+    const g = new THREE.Group(); at(g, box(160, 11, 60, M.brick('#8f5a40')), 0, 5.5, 0);
+    const b = new THREE.Group(); at(g, b, 0, 11, -6); gable(b, 140, 44, 40, 20, M.corr('#9aa0a2'), M.corr('#9aa0a2'), 6);
+    at(b, box(40, 30, 1, 0x1a1512), -30, 15, 22.3); at(b, box(40, 30, 1, 0x1a1512), 30, 15, 22.3);
+    at(b, box(70, 8, 1.2, signMat('GOODS', '#f4efe2', '#6b2a1d', 200, 48)), 0, 36, 22.4);
+    return g; } },
+  cottage: { name: 'Weatherboard cottage', sub: 'tin roof', build: (r) => {
+    const walls = ['#f1ead6', '#dfe7d2', '#e9d8c0', '#d6e1e6'][(r() * 4) | 0];
+    const g = new THREE.Group(); gable(g, 62, 50, 28, 20, M.weather(walls), M.corr(['#8f3d2e', '#6d7a5a', '#8a8f93'][(r() * 3) | 0]));
+    windows(g, 50, 16, 25.6, 2, 10); at(g, box(9, 18, 1, 0x3b5a3a), 0, 9, 25.6);
+    verandah(g, 60, 14, 22, 25, M.corr('#8a8f93')); at(g, box(7, 14, 7, M.brick('#8a3f2a')), 18, 42, -8);
+    return g; } },
+  bungalow: { name: 'Brick bungalow', sub: 'tile roof', build: () => {
+    const g = new THREE.Group(); gable(g, 72, 54, 28, 22, M.brick('#a4553a'), M.tile('#b5532f'), 6);
+    windows(g, 60, 16, 27.6, 3, 11, 0x24333d); at(g, box(10, 18, 1, 0x6b4a2c), 12, 9, 27.6);
+    return g; } },
+  store: { name: 'General store', sub: 'shop front', build: () => {
+    const g = new THREE.Group(); at(g, box(72, 34, 52, M.weather('#e4d6b0')), 0, 17, 0);
+    at(g, box(74, 12, 2, 0xe4d6b0), 0, 40, 26); at(g, box(64, 8, 1.2, signMat('GENERAL STORE', '#7a2a20', '#f4efe2', 320, 44)), 0, 40, 27.2);
+    at(g, box(56, 20, 1, 0x1e2a33, { roughness: 0.2 }), 0, 14, 26.2);
+    verandah(g, 72, 20, 30, 26, M.corr('#8a8f93'), 0x2a4a38); at(g, prism(76, 56, 10, M.corr('#8a8f93')), 0, 34, 0);
+    return g; } },
+  hotel: { name: 'Country hotel', sub: 'two storey', build: () => {
+    const g = new THREE.Group(); at(g, box(150, 64, 66, M.brick('#9c4a30')), 0, 32, 0);
+    at(g, box(154, 10, 68, 0xe8dfca), 0, 69, 0);
+    at(g, box(80, 9, 1.2, signMat('HOTEL', '#e8dfca', '#6b2a1d', 256, 48)), 0, 69, 34.2);
+    windows(g, 140, 18, 33.6, 7, 14); windows(g, 140, 48, 33.6, 7, 14);
+    for (const y of [0, 34]){
+      at(g, box(150, 1.5, 18, 0x8a8f93), 0, y + 30, 42);
+      for (let i = 0; i <= 8; i++) at(g, box(1.4, 30, 1.4, 0xefe9da), -74 + i * 18.5, y + 15, 50);
+      if (y) at(g, box(150, 5, 0.8, 0xefe9da), 0, y + 4, 50.5);
+    }
+    return g; } },
+  church: { name: 'Church', sub: 'with steeple', build: () => {
+    const g = new THREE.Group(); gable(g, 90, 44, 34, 30, M.weather('#f3efe4'), M.corr('#6d7a5a'));
+    for (let i = 0; i < 4; i++) at(g, box(6, 14, 1, 0x4a6a8a, { roughness: 0.3 }), -30 + i * 20, 18, 22.6);
+    const t = new THREE.Group(); at(g, t, 52, 0, 0);
+    at(t, box(20, 58, 20, M.weather('#f3efe4')), 0, 29, 0);
+    const sp = mesh(new THREE.ConeGeometry(15, 40, 4), mat(0x6d7a5a)); sp.rotation.y = Math.PI / 4; at(t, sp, 0, 78, 0);
+    at(t, box(8, 16, 1, 0x3a2a20), 0, 8, 10.4);
+    return g; } },
+  tank: { name: 'Water tank', sub: 'on stand', build: () => {
+    const g = new THREE.Group(); for (const sx of [-1, 1]) for (const sz of [-1, 1]) at(g, box(3, 56, 3, 0x5a4632), sx * 15, 28, sz * 15);
+    at(g, box(40, 2, 40, 0x5a4632), 0, 56, 0);
+    const tk = cyl(22, 22, 26, M.corr('#9aa0a2'), 24); at(g, tk, 0, 70, 0);
+    at(g, mesh(new THREE.ConeGeometry(23, 6, 24), mat(0x9aa0a2, { metalness: 0.2 })), 0, 86, 0);
+    return g; } },
+  gum: { name: 'Gum tree', sub: 'eucalypt', build: (r) => gumTree(r) },
+  bushes: { name: 'Shrubs', sub: 'clump', build: (r) => {
+    const g = new THREE.Group(); for (let i = 0; i < 6; i++){ const s = mesh(new THREE.IcosahedronGeometry(8 + r() * 8, 1), mat([0x4f6d3f, 0x61804a, 0x3f5a33][(r() * 3) | 0], { flatShading: true, roughness: 1 })); s.scale.y = 0.7; at(g, s, (r() - 0.5) * 34, 6, (r() - 0.5) * 34); } return g; } },
+  car: { name: 'Car', sub: '1970s sedan', build: (r) => carModel(r) },
+  people: { name: 'People', sub: 'group of 4', build: (r) => { const g = new THREE.Group(); for (let i = 0; i < 4; i++) at(g, person(r), (r() - 0.5) * 24, 0, (r() - 0.5) * 24, r() * 6); return g; } },
+  road: { name: 'Road', sub: '160 × 50 mm', build: () => {
+    const g = new THREE.Group(); at(g, box(160, 1.2, 50, 0x3d3b38, { roughness: 1 }), 0, 0.6, 0);
+    for (let i = 0; i < 4; i++) at(g, box(18, 0.4, 1.6, 0xe9e4d4), -60 + i * 40, 1.3, 0);
+    for (const s of [-1, 1]) at(g, box(160, 2, 3, 0xa8a49a), 0, 1, s * 26.5);
+    return g; } },
+  hill: { name: 'Hill with tunnel', sub: '600 mm across', build: null },
+};
+
+/* Hill with tunnel: a mound whose portals are placed wherever the track crosses it */
+const HILL_R = 300, HILL_H = 170, PORTAL_R = HILL_R - 72;
+function hillHeight(r){
+  if (r >= HILL_R) return 0;
+  if (r <= PORTAL_R) return HILL_H * (1 - 0.32 * Math.pow(r / PORTAL_R, 2));
+  const t = (r - PORTAL_R) / (HILL_R - PORTAL_R);
+  return HILL_H * 0.68 * Math.pow(1 - t, 1.4);
+}
+function nearestTrackDist(x, y){ let best = 1e9; for (const s of trackSamples){ const dx = s.x - x, dy = s.y - y; const d = dx * dx + dy * dy; if (d < best) best = d; } return Math.sqrt(best); }
+function buildHill(s){
+  const g = new THREE.Group(); const r = rng(s.id * 97 + 3);
+  const RINGS = 40, SEGS = 128, pos = [], col = [], idx = [];
+  const near = trackSamples.filter(t => Math.hypot(t.x - s.x, t.y - s.y) < HILL_R + 30);
+  const dist = (x, y) => { let b = 1e9; for (const t of near){ const d = (t.x - x) ** 2 + (t.y - y) ** 2; if (d < b) b = d; } return Math.sqrt(b); };
+  const cA = new THREE.Color(0x5b7d3c), cB = new THREE.Color(0x7b8f4a), cC = new THREE.Color(0x8a7a52);
+  for (let i = 0; i <= RINGS; i++){
+    for (let j = 0; j < SEGS; j++){
+      const rr = HILL_R * i / RINGS, a = j / SEGS * Math.PI * 2;
+      const lx = Math.cos(a) * rr, ly = Math.sin(a) * rr, wx = s.x + lx, wy = s.y + ly;
+      let h = hillHeight(rr) * (0.92 + 0.16 * Math.sin(a * 3 + s.id) * Math.sin(rr * 0.03));
+      if (i === RINGS) h = 0;
+      if (rr > PORTAL_R - 4 && i < RINGS){ const d = dist(wx, wy); if (d < 30) h = 0.6; else if (d < 72) h = Math.min(h, Math.pow((d - 30) / 42, 1.3) * h); }
+      pos.push(lx, h, -ly);
+      const c = cA.clone().lerp(cB, r()).lerp(cC, h < 20 ? 0.5 : 0); col.push(c.r, c.g, c.b);
+    }
+  }
+  for (let i = 0; i < RINGS; i++) for (let j = 0; j < SEGS; j++){
+    const a = i * SEGS + j, b = i * SEGS + (j + 1) % SEGS, c = (i + 1) * SEGS + j, d = (i + 1) * SEGS + (j + 1) % SEGS;
+    idx.push(a, c, b, b, c, d);
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+  const outer = mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.FrontSide }));
+  const inner = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x0c0907, side: THREE.BackSide }));
+  g.add(outer); g.add(inner);
+  // portals where the track crosses the portal ring
+  const shape = new THREE.Shape(); shape.moveTo(-42, 0); shape.lineTo(42, 0); shape.lineTo(42, 92); shape.lineTo(-42, 92); shape.closePath();
+  const hole = new THREE.Path(); hole.moveTo(-22, 0); hole.lineTo(22, 0); hole.lineTo(22, 42); hole.absarc(0, 42, 22, 0, Math.PI, false); hole.lineTo(-22, 0); shape.holes.push(hole);
+  const pGeo = new THREE.ExtrudeGeometry(shape, { depth: 10, bevelEnabled: false }); pGeo.translate(0, 0, -5);
+  const stone = M.brick('#8c8374');
+  for (const p of L.pieces) p.def.routes.forEach((route) => {
+    const smp = sampleRoute(route, 4).map(q => worldPose(p, q));
+    for (let i = 1; i < smp.length; i++){
+      const r0 = Math.hypot(smp[i - 1].x - s.x, smp[i - 1].y - s.y), r1 = Math.hypot(smp[i].x - s.x, smp[i].y - s.y);
+      if ((r0 - PORTAL_R) * (r1 - PORTAL_R) <= 0 && r0 !== r1){
+        const q = smp[i]; const portal = mesh(pGeo, stone);
+        portal.position.set(q.x - s.x, 0, -(q.y - s.y)); portal.rotation.y = q.h + Math.PI / 2; g.add(portal);
+      }
+    }
+  });
+  for (let i = 0; i < 5; i++){ const a = r() * Math.PI * 2, rr = r() * PORTAL_R * 0.7; const t = gumTree(r); t.scale.setScalar(0.8); at(g, t, Math.cos(a) * rr, hillHeight(rr) * 0.9, -Math.sin(a) * rr); }
+  return g;
+}
+
+const scenMeshes = new Map();
+function buildScenery(s){
+  const def = SCEN[s.type]; const r = rng(s.id * 7919 + 17);
+  const grp = new THREE.Group();
+  const inner = s.type === 'hill' ? buildHill(s) : def.build(r, s);
+  grp.add(inner); grp.position.set(s.x, 0, -s.y); grp.rotation.y = s.type === 'hill' ? 0 : s.h;
+  grp.userData.sceneryId = s.id;
+  grp.traverse(o => { o.userData.sceneryId = s.id; });
+  return grp;
+}
+function rebuildScenery(onlyHills){
+  for (const [id, m] of scenMeshes){
+    const s = scById(id);
+    if (!s || !onlyHills || s.type === 'hill'){ scenGroup.remove(m); scenMeshes.delete(id); }
+  }
+  for (const s of L.scenery){
+    if (scenMeshes.has(s.id)) continue;
+    const m = buildScenery(s); scenGroup.add(m); scenMeshes.set(s.id, m);
+  }
+  updatePassengerFigures(true);
+  updateSelectionBox();
+}
+
+/* =========================================================================
+   Rolling stock
+   ========================================================================= */
+const wheelGeo = {};
+function wheel(r, color){ const k = r.toFixed(1); if (!wheelGeo[k]){ wheelGeo[k] = new THREE.CylinderGeometry(r, r, 1.8, 18); wheelGeo[k].rotateX(Math.PI / 2); } const w = mesh(wheelGeo[k], mat(color || 0x1b1b1b, { metalness: 0.4, roughness: 0.5 })); return w; }
+function bogie(len, axles, r, color){
+  const g = new THREE.Group(); const wheels = [];
+  at(g, box(len, 5, 26, color || 0x1d1d1d), 0, RAIL_TOP + r + 0.5, 0);
+  for (let i = 0; i < axles; i++){
+    const x = axles === 1 ? 0 : -len / 2 + 6 + i * (len - 12) / (axles - 1);
+    for (const z of [-RAIL_OFF, RAIL_OFF]){ const w = wheel(r); at(g, w, x, RAIL_TOP + r, z); wheels.push(w); }
+  }
+  g.userData.wheels = wheels; g.userData.r = r; return g;
+}
+function sideTex(kind){
+  return canvasTex(1024, 96, (g, W, H) => {
+    if (kind === 'ss'){
+      g.fillStyle = '#c9ccd0'; g.fillRect(0, 0, W, H);
+      for (let x = 0; x < W; x += 6){ g.fillStyle = x % 12 ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.12)'; g.fillRect(x, 60, 3, H - 60); }
+      g.fillStyle = '#7a2a20'; g.fillRect(0, 54, W, 5);
+    } else if (kind === 'red'){
+      g.fillStyle = '#7a2b20'; g.fillRect(0, 0, W, H); g.fillStyle = '#e7d9b0'; g.fillRect(0, 56, W, 3);
+    } else if (kind === 'louvre'){
+      g.fillStyle = '#6b3524'; g.fillRect(0, 0, W, H); g.fillStyle = 'rgba(0,0,0,0.3)'; for (let y = 8; y < H; y += 7) g.fillRect(40, y, W - 80, 2);
+      g.fillStyle = '#e8dcc0'; g.font = '700 22px Barlow, Arial'; g.fillText('NSWGR', 70, 86); return;
+    } else if (kind === 'brake'){
+      g.fillStyle = '#5a2e1f'; g.fillRect(0, 0, W, H); g.fillStyle = '#1e2a33'; g.fillRect(420, 18, 70, 28); g.fillRect(540, 18, 70, 28); return;
+    }
+    g.fillStyle = '#1b2530';
+    for (let i = 0; i < 11; i++) g.fillRect(90 + i * 78, 16, 58, 34);
+    g.fillStyle = 'rgba(255,255,255,0.18)'; for (let i = 0; i < 11; i++) g.fillRect(92 + i * 78, 18, 54, 5);
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(30, 12, 38, 76); g.fillRect(W - 68, 12, 38, 76);
+  });
+}
+function sideBox(len, h, w, sideMap, base){
+  const plain = mat(base);
+  const side = new THREE.MeshStandardMaterial({ map: sideMap, roughness: 0.6, metalness: base === 0xc9ccd0 ? 0.35 : 0.05 });
+  return mesh(new THREE.BoxGeometry(len, h, w), [plain, plain, plain, plain, side, side]);
+}
+function roofArc(len, halfW, color, R){
+  R = R || 22; const a = Math.asin(halfW / R);
+  const g = new THREE.CylinderGeometry(R, R, len, 18, 1, true, Math.PI / 2 - a, 2 * a); g.rotateZ(Math.PI / 2);
+  const m = mesh(g, mat(color, { side: THREE.DoubleSide })); m.userData.drop = R * Math.cos(a); return m;
+}
+const VEH = {
+  '44': { len: 205, inset: [62, 62], kind: 'loco', build(){
+      const g = new THREE.Group(), red = 0x7c2a1d, dark = 0x1a1a1a, U = {};
+      at(g, box(196, 5, 29, dark), 0, 16.5, 0);
+      at(g, box(176, 27, 30, red), -6, 32.5, 0);
+      const nose = mesh(new THREE.CylinderGeometry(15, 15, 27, 20, 1, false, 0, Math.PI), mat(red)); nose.scale.x = 0.85; at(g, nose, 82, 32.5, 0);
+      at(g, box(176, 2.6, 30.4, 0xe0b85a), -6, 24, 0);
+      at(g, box(174, 2.5, 27, 0x5c5c5a), -6, 47.2, 0);
+      const nr = mesh(new THREE.CylinderGeometry(13.5, 13.5, 2.5, 20, 1, false, 0, Math.PI), mat(0x5c5c5a)); nr.scale.x = 0.85; at(g, nr, 82, 47.2, 0);
+      at(g, box(20, 8, 30.6, 0x16202a, { roughness: 0.2 }), 72, 39, 0);
+      at(g, box(14, 8, 30.6, 0x16202a, { roughness: 0.2 }), -86, 39, 0);
+      at(g, box(1, 8, 24, 0x16202a, { roughness: 0.2 }), -94.3, 39, 0);
+      const hl = cyl(2.2, 2.2, 1.5, 0xfff3c2, 12, { emissive: 0x665522 }); hl.rotation.z = Math.PI / 2; at(g, hl, 95.5, 42, 0);
+      for (const x of [-102, 100]) at(g, box(4, 4, 6, 0x333333), x, 17, 0);
+      for (const z of [-15.3, 15.3]) at(g, box(40, 6, 0.8, 0x6a6a6a), -40, 22, z);
+      U.bogies = [bogie(56, 3, 5.85), bogie(56, 3, 5.85)];
+      at(g, U.bogies[0], 62, 0, 0); at(g, U.bogies[1], -62, 0, 0);
+      U.fuel = at(g, box(60, 7, 24, 0x222222), 0, 10.5, 0);
+      U.cabX = 76; U.eye = 41; return { g, U };
+    } },
+  c38: { len: 162, inset: [18, 34], kind: 'loco', build(){
+      const g = new THREE.Group(), green = 0x1f4a2e, blk = 0x151515, U = {};
+      at(g, box(150, 3, 31, blk), 0, 23, 0);
+      const boiler = cyl(12.5, 12.5, 104, green, 22); boiler.rotation.z = Math.PI / 2; at(g, boiler, 8, 38, 0);
+      const sbx = cyl(13, 13, 20, blk, 22); sbx.rotation.z = Math.PI / 2; at(g, sbx, 68, 38, 0);
+      const door = cyl(11, 11, 1.5, 0x222222, 22); door.rotation.z = Math.PI / 2; at(g, door, 78.5, 38, 0);
+      at(g, cyl(4.2, 4.6, 10, blk, 14), 68, 55, 0);
+      at(g, cyl(5, 5.5, 7, green, 14), 22, 53, 0); at(g, mesh(new THREE.SphereGeometry(5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(green)), 22, 56.5, 0);
+      at(g, box(34, 32, 31, green), -60, 41, 0); at(g, box(40, 2.4, 34, blk), -61, 58, 0);
+      at(g, box(9, 9, 31.6, 0x16202a, { roughness: 0.2 }), -52, 47, 0);
+      for (const z of [-15.6, 15.6]){ at(g, box(24, 11, 6, green), 56, 21, z * 1.05); at(g, box(120, 1.5, 3, 0xd9c28a), 4, 25, z); }
+      at(g, box(6, 6, 31, 0x8a1c14), 81, 21, 0);
+      const drivers = [], dx = [36, 12, -12];
+      for (const x of dx) for (const z of [-RAIL_OFF - 1.5, RAIL_OFF + 1.5]){ const w = wheel(10, 0x1b1b1b); at(g, w, x, RAIL_TOP + 10, z); drivers.push(w); const hub = wheel(3, 0xbdb6a3); at(g, hub, x, RAIL_TOP + 10, z + Math.sign(z) * 1); drivers.push(hub); }
+      U.rods = []; for (const z of [-RAIL_OFF - 3.2, RAIL_OFF + 3.2]){ const rd = box(50, 2, 1, 0xd8d4c8, { metalness: 0.5 }); at(g, rd, 12, RAIL_TOP + 10, z); U.rods.push(rd); }
+      U.drivers = drivers; U.driverR = 10; U.rodY = RAIL_TOP + 10;
+      U.bogies = [bogie(22, 2, 5.2), bogie(12, 1, 6.5)];
+      at(g, U.bogies[0], 81 - 18, 0, 0); at(g, U.bogies[1], -81 + 34, 0, 0);
+      U.chimney = new THREE.Vector3(68, 62, 0); U.cabX = -48; U.eye = 50; U.steam = true;
+      return { g, U };
+    } },
+  c38t: { len: 112, inset: [26, 26], kind: 'tender', build(){
+      const g = new THREE.Group(), green = 0x1f4a2e, U = {};
+      at(g, box(108, 3, 30, 0x151515), 0, 17, 0); at(g, box(104, 26, 31, green), 0, 32, 0);
+      at(g, box(80, 5, 27, 0x0e0e0e, { roughness: 1 }), 8, 46.5, 0); at(g, box(104, 1.2, 31.6, 0xd9c28a), 0, 23, 0);
+      U.bogies = [bogie(30, 2, 5.2), bogie(30, 2, 5.2)]; at(g, U.bogies[0], 30, 0, 0); at(g, U.bogies[1], -30, 0, 0);
+      return { g, U };
+    } },
+  ss: { len: 230, inset: [40, 40], kind: 'pass', build(){ return carriage('ss', 0xc9ccd0, 0xa9adb2); } },
+  red: { len: 230, inset: [40, 40], kind: 'pass', build(){ return carriage('red', 0x7a2b20, 0x2d2d2d); } },
+  open: { len: 110, inset: [28, 28], kind: 'goods', build(){
+      const g = new THREE.Group(), grey = 0x6d7174, U = {};
+      at(g, box(106, 3, 29, 0x1a1a1a), 0, 15, 0); at(g, box(104, 2, 30, grey), 0, 17.5, 0);
+      for (const z of [-14.3, 14.3]) at(g, box(104, 14, 1.4, grey), 0, 25, z);
+      for (const x of [-51.5, 51.5]) at(g, box(1.4, 14, 30, grey), x, 25, 0);
+      U.load = at(g, box(100, 6, 27, 0x151515, { roughness: 1 }), 0, 29, 0); U.load.visible = false;
+      U.axles = [bogie(8, 1, 4.8), bogie(8, 1, 4.8)]; at(g, U.axles[0], 28, 0, 0); at(g, U.axles[1], -28, 0, 0);
+      return { g, U };
+    } },
+  louvre: { len: 116, inset: [30, 30], kind: 'goods', build(){
+      const g = new THREE.Group(), U = {};
+      at(g, box(112, 3, 29, 0x1a1a1a), 0, 15, 0); at(g, sideBox(110, 26, 30, sideTex('louvre'), 0x6b3524), 0, 30, 0);
+      const rf = roofArc(112, 15.5, 0x8a8f93, 24); at(g, rf, 0, 43 - rf.userData.drop, 0);
+      U.axles = [bogie(8, 1, 4.8), bogie(8, 1, 4.8)]; at(g, U.axles[0], 30, 0, 0); at(g, U.axles[1], -30, 0, 0);
+      U.load = new THREE.Object3D(); return { g, U };
+    } },
+  brake: { len: 100, inset: [28, 28], kind: 'brake', build(){
+      const g = new THREE.Group(), U = {};
+      at(g, box(98, 3, 29, 0x1a1a1a), 0, 15, 0); at(g, sideBox(72, 26, 30, sideTex('brake'), 0x5a2e1f), -4, 30, 0);
+      const rf = roofArc(96, 15.5, 0x2d2d2d, 24); at(g, rf, 0, 43 - rf.userData.drop, 0);
+      at(g, box(12, 2, 30, 0x5a2e1f), 42, 17.5, 0); at(g, box(1, 8, 30, 0x5a2e1f), 48, 22, 0);
+      const tail = cyl(2.5, 2.5, 1, 0xd21c12, 12, { emissive: 0x440000 }); tail.rotation.z = Math.PI / 2; at(g, tail, -41, 36, 10);
+      U.axles = [bogie(8, 1, 4.8), bogie(8, 1, 4.8)]; at(g, U.axles[0], 28, 0, 0); at(g, U.axles[1], -28, 0, 0);
+      return { g, U };
+    } },
+};
+function carriage(kind, base, roofCol){
+  const g = new THREE.Group(), U = {};
+  at(g, box(222, 4, 28, 0x1a1a1a), 0, 16, 0);
+  at(g, sideBox(226, 24, 31, sideTex(kind), base), 0, 30, 0);
+  const rf = roofArc(224, 15.5, roofCol, 22); at(g, rf, 0, 42 - rf.userData.drop, 0);
+  for (const x of [-60, 0, 60]) at(g, box(30, 6, 20, 0x2a2a2a), x, 11, 0);
+  U.bogies = [bogie(28, 2, 4.8), bogie(28, 2, 4.8)]; at(g, U.bogies[0], 75, 0, 0); at(g, U.bogies[1], -75, 0, 0);
+  return { g, U };
+}
+const LOCO_INFO = {
+  '44': 'NSW 44 class. 100 built by AE Goodwin, Auburn, 1957 to 1967. Model: 205 mm long (17.81 m at 1:87). Lima made an HO model of this class for the Australian market.',
+  c38: 'NSW C38 class Pacific (4-6-2). 30 built 1943 to 1949 for express passenger work. Lima made an HO model of the 38 class.',
+};
+
+/* =========================================================================
+   Train state and movement
+   ========================================================================= */
+const T = { vehicles: [], pivots: [], v: 0, throttle: 0, dirRev: false, locoKey: '44', consist: 'pass', state: 'none',
+  stopT: 0, movedSinceStop: 1e9, onboard: [], delivered: 0, goods: 0, derails: 0, tipT: 0, odo: 0, chuffAcc: 0, needsPlace: true, rb: null };
+function clone(c){ return { p: c.p, r: c.r, s: c.s, dir: c.dir }; }
+function advance(c, ds, ev, noSpring){
+  let rem = ds * c.dir; let guard = 0;
+  while (guard++ < 60){
+    const route = c.p.def.routes[c.r];
+    if (c.p.def.buffer && c.r === 0){
+      const lim = route.len - 36;
+      if (rem > 0 && c.s + rem > lim){ const over = c.s + rem - lim; c.s = lim; c.hit = 'buffer'; return over; }
+    }
+    const ns = c.s + rem;
+    if (ns >= 0 && ns <= route.len){ c.s = ns; return 0; }
+    const exitEnd = ns > route.len ? c.r + 1 : 0;
+    const over = ns > route.len ? ns - route.len : -ns;
+    const link = c.p.conn[exitEnd];
+    if (!link){ c.s = ns > route.len ? route.len : 0; c.hit = 'end'; return over; }
+    if (ev) ev.joints++;
+    const q = link.p, f = link.e;
+    let r;
+    if (f === 0) r = q.def.point ? q.state : 0;
+    else { r = f - 1; if (q.def.point && q.state !== r && !noSpring){ q.state = r; if (ev) ev.sprung.push(q); } }
+    const enter = f === 0 ? 1 : -1;
+    c.dir = enter * Math.sign(ds || 1);
+    c.p = q; c.r = r; c.s = f === 0 ? 0 : q.def.routes[r].len;
+    rem = over * enter;
+  }
+  return 0;
+}
+function cursorPose(c){
+  const w = worldPose(c.p, routePose(c.p.def.routes[c.r], c.s));
+  if (c.dir < 0){ w.h += Math.PI; w.k = -w.k; }
+  return w;
+}
+function trainSpec(){
+  const loco = T.locoKey === '44' ? ['44'] : ['c38', 'c38t'];
+  const cons = T.consist === 'pass' ? (T.locoKey === '44' ? ['ss', 'ss', 'ss'] : ['red', 'red', 'red'])
+    : T.consist === 'goods' ? ['open', 'louvre', 'open', 'louvre', 'brake'] : [];
+  return loco.concat(cons);
+}
+function clearTrain(){ trainGroup.clear(); T.vehicles = []; T.pivots = []; T.state = 'none'; }
+function startCandidates(){
+  const plats = L.scenery.filter(s => SCEN[s.type].snap && s.type !== 'goodsshed');
+  const ref = plats[0] ? { x: plats[0].x, y: plats[0].y } : { x: 0, y: 0 };
+  return L.pieces.filter(p => !p.def.buffer).map(p => ({ p, d: Math.hypot(p.x - ref.x, p.y - ref.y) })).sort((a, b) => a.d - b.d).map(o => o.p);
+}
+function placeTrain(){
+  clearTrain(); solveConnections();
+  if (!L.pieces.length) return false;
+  const spec = trainSpec(), GAP = 6, offs = []; let acc = 0;
+  spec.forEach(k => { const d = VEH[k]; offs.push({ k, f: acc + d.inset[0], r: acc + d.len - d.inset[1] }); acc += d.len + GAP; });
+  const total = acc - GAP;
+  const saved = L.pieces.map(p => p.state);
+  for (const p of startCandidates()){
+    for (const dir of [1, -1]){
+      const len = p.def.routes[0].len;
+      const head = { p, r: 0, s: dir > 0 ? 0 : len, dir };
+      if (advance(head, len / 2 + total / 2, null, true)) continue;
+      const piv = []; let ok = true;
+      for (const o of offs){
+        const a = clone(head), b = clone(head);
+        if (advance(a, -o.f, null, true) || advance(b, -o.r, null, true)){ ok = false; break; }
+        piv.push([a, b]);
+      }
+      if (!ok) continue;
+      L.pieces.forEach((q, i) => { q.state = saved[i]; });
+      offs.forEach((o, i) => {
+        const def = VEH[o.k]; const built = def.build();
+        built.g.rotation.order = 'YXZ';
+        trainGroup.add(built.g);
+        T.vehicles.push({ key: o.k, def, g: built.g, U: built.U, front: piv[i][0], rear: piv[i][1], loaded: false,
+          spacing: def.len - def.inset[0] - def.inset[1], gapNext: i < offs.length - 1 ? def.inset[1] + GAP + VEH[offs[i + 1].k].inset[0] : 0 });
+      });
+      T.pivots = T.vehicles.flatMap(v => [v.front, v.rear]);
+      T.v = 0; T.state = 'running'; T.needsPlace = false; T.tipT = 0; T.stopT = 0; T.movedSinceStop = 1e9;
+      T.vehicles.forEach(v => v.g.traverse(o => { if (o.isMesh){ o.castShadow = true; } }));
+      poseTrain(0);
+      return true;
+    }
+  }
+  L.pieces.forEach((q, i) => { q.state = saved[i]; });
+  return false;
+}
+function poseTrain(ds){
+  for (const v of T.vehicles){
+    const f = cursorPose(v.front), r = cursorPose(v.rear);
+    const yaw = Math.atan2(f.y - r.y, f.x - r.x);
+    v.g.position.set((f.x + r.x) / 2, 0, -(f.y + r.y) / 2); v.g.rotation.set(0, yaw, 0);
+    v.yaw = yaw; v.mx = (f.x + r.x) / 2; v.my = (f.y + r.y) / 2;
+    const bs = v.U.bogies || v.U.axles || [];
+    if (bs[0]) bs[0].rotation.y = normAng(f.h - yaw);
+    if (bs[1]) bs[1].rotation.y = normAng(r.h - yaw);
+    if (ds){
+      for (const b of bs) for (const w of b.userData.wheels) w.rotation.z -= ds / b.userData.r;
+      if (v.U.drivers){
+        const a = -T.odo / v.U.driverR;
+        for (const w of v.U.drivers) w.rotation.z = a;
+        v.U.rods.forEach((rd, i) => { const ph = a + (i ? Math.PI / 2 : 0); rd.position.x = 12 + 4.5 * Math.cos(ph); rd.position.y = v.U.rodY + 4.5 * Math.sin(ph); });
+      }
+    }
+    if (v.U.load) v.U.load.visible = !!v.loaded;
+  }
+}
+function leadVehicle(){ if (!T.vehicles.length) return null; return T.dirRev ? T.vehicles[T.vehicles.length - 1] : T.vehicles[0]; }
+
+function derail(reason, tip){
+  if (T.state !== 'running') return;
+  T.state = 'derailed'; T.derails++; updateTally();
+  Sound.crash(Math.min(1, Math.abs(T.v) / 400));
+  toast(reason + ' Turn the controller off, then press Re-rail.', 'bad');
+  const sp = T.v;
+  T.vehicles.forEach((v, i) => {
+    const out = tip ? tip.side : (rnd() < 0.5 ? -1 : 1);
+    const fwdx = Math.cos(v.yaw), fwdy = Math.sin(v.yaw);
+    const lat = tip ? Math.abs(sp) * 0.35 : Math.abs(sp) * 0.15 * (rnd() - 0.5);
+    v.rb = { x: v.mx, y: v.my, z: 0, vx: fwdx * sp + (-fwdy) * lat * out, vy: fwdy * sp + fwdx * lat * out, vz: 0,
+      yaw: v.yaw, yr: (rnd() - 0.5) * (tip ? 1.2 : 3) * Math.min(1, Math.abs(sp) / 300), roll: 0,
+      rollT: (Math.abs(sp) > 120 || tip) ? -out * (1.25 + rnd() * 0.3) : -out * 0.25, delay: i * 0.03 };
+  });
+  T.v = 0;
+}
+function updateDerailed(dt){
+  for (const v of T.vehicles){
+    const b = v.rb; if (!b) continue;
+    if (b.delay > 0){ b.delay -= dt; continue; }
+    const onBoard = Math.abs(b.x) < BOARD_W / 2 && Math.abs(b.y) < BOARD_D / 2;
+    if (onBoard && b.z >= -0.1){
+      const sp = Math.hypot(b.vx, b.vy); const dec = Math.min(sp, 1100 * dt);
+      if (sp > 0){ b.vx -= b.vx / sp * dec; b.vy -= b.vy / sp * dec; }
+      b.yr *= Math.max(0, 1 - 2.5 * dt); b.z = 0; b.vz = 0;
+    } else {
+      b.vz -= 9810 * dt; b.z += b.vz * dt;
+      const floor = -TABLE_H + 10;
+      if (b.z < floor){ if (b.vz < -600) Sound.thud(0.5); b.z = floor; b.vz = 0; b.vx *= 0.3; b.vy *= 0.3; b.yr *= 0.3; b.rollT = Math.sign(b.rollT || 1) * 1.57; }
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt; b.yaw += b.yr * dt;
+    b.roll += (b.rollT - b.roll) * Math.min(1, dt * 5);
+    v.g.position.set(b.x, b.z + 15 * Math.abs(Math.sin(b.roll)), -b.y);
+    v.g.rotation.set(b.roll, b.yaw, 0);
+  }
+}
+
+/* Stations: passengers and goods */
+const platformState = new Map();
+function stationList(){ return L.scenery.filter(s => s.type === 'platform' || s.type === 'platformLong'); }
+function pState(s){ if (!platformState.has(s.id)) platformState.set(s.id, { waiting: 2 + ((s.id * 3) % 4), spawnT: 4 + rnd() * 6, group: null, shown: -1 }); return platformState.get(s.id); }
+function updatePassengerFigures(force){
+  for (const s of stationList()){
+    const st = pState(s);
+    if (!force && st.shown === st.waiting && st.group && st.group.parent) continue;
+    if (st.group) fxGroup.remove(st.group);
+    const g = new THREE.Group(); const r = rng(s.id * 31 + st.waiting);
+    const len = SCEN[s.type].len;
+    for (let i = 0; i < st.waiting; i++){
+      const lx = -len / 2 + 30 + r() * (len - 60), lz = 2 + r() * 12;
+      const [wx, wy] = rot(lx, -lz, s.h);
+      const pm = person(r); pm.position.set(s.x + wx, 11.4, -(s.y + wy)); pm.rotation.y = s.h + (r() - 0.5);
+      g.add(pm);
+    }
+    fxGroup.add(g); st.group = g; st.shown = st.waiting;
+  }
+  for (const [id, st] of platformState){ if (!scById(id)){ if (st.group) fxGroup.remove(st.group); platformState.delete(id); } }
+}
+function alongside(v, s, len, maxLat){
+  const dx = v.mx - s.x, dy = v.my - s.y;
+  const along = dx * Math.cos(s.h) + dy * Math.sin(s.h), lat = -dx * Math.sin(s.h) + dy * Math.cos(s.h);
+  return Math.abs(along) < len / 2 + 20 && Math.abs(lat) < maxLat;
+}
+function serveStops(){
+  const plats = stationList();
+  for (const s of plats){
+    const len = SCEN[s.type].len;
+    const cars = T.vehicles.filter(v => (v.def.kind === 'pass') && alongside(v, s, len, 75));
+    if (!cars.length) continue;
+    const st = pState(s);
+    const off = T.onboard.filter(d => d === s.id).length;
+    T.onboard = T.onboard.filter(d => d !== s.id);
+    const cap = cars.length * 24;
+    const room = Math.max(0, T.vehicles.filter(v => v.def.kind === 'pass').length * 24 - T.onboard.length);
+    const on = Math.min(st.waiting, room, cap);
+    st.waiting -= on;
+    const others = plats.filter(p => p.id !== s.id);
+    for (let i = 0; i < on; i++) T.onboard.push(others.length ? others[(rnd() * others.length) | 0].id : s.id);
+    T.delivered += off;
+    if (off || on){ toast(`${s.name || 'Platform'}: ${off} got off, ${on} got on.`, 'good'); Sound.chime(); }
+    else toast(`${s.name || 'Platform'}: nobody waiting yet.`);
+  }
+  for (const s of L.scenery.filter(x => x.type === 'goodsshed')){
+    const wag = T.vehicles.filter(v => v.def.kind === 'goods' && alongside(v, s, 170, 90));
+    if (!wag.length) continue;
+    wag.forEach(v => { v.loaded = !v.loaded; });
+    T.goods += wag.length;
+    toast(`Goods shed: ${wag.length} wagon${wag.length > 1 ? 's' : ''} ${wag[0].loaded ? 'loaded' : 'unloaded'}.`, 'good'); Sound.chime();
+  }
+  updatePassengerFigures(); updateTally();
+}
+
+/* Level crossings */
+let bellT = 0;
+function updateCrossings(dt, t){
+  let anyActive = false;
+  for (const p of L.pieces){
+    if (!p.def.crossing) continue;
+    const m = pieceMeshes.get(p.id); if (!m) continue;
+    const c = worldPose(p, { x: 84, y: 0, h: 0 });
+    const active = T.state !== 'none' && T.vehicles.some(v => Math.hypot(v.mx - c.x, v.my - c.y) < v.def.len / 2 + 260);
+    const on = Math.floor(t * 2.4) % 2;
+    m.userData.lamps.forEach((l, i) => { const lit = active && ((i % 2) === on); l.material.color.setHex(lit ? 0xff2a1a : 0x330000); l.material.emissive.setHex(lit ? 0xff2a1a : 0x000000); });
+    if (active) anyActive = true;
+  }
+  if (anyActive){ bellT -= dt; if (bellT <= 0){ Sound.bell(); bellT = 0.42; } } else bellT = 0;
+}
+
+/* =========================================================================
+   Sound (synthesised with Web Audio)
+   ========================================================================= */
+const Sound = {
+  ctx: null, on: false, master: null, noise: null, motor: null, horn: null,
+  init(){
+    if (this.ctx) return true;
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return false;
+    const ctx = this.ctx = new C(); this.master = ctx.createGain(); this.master.gain.value = 0.9; this.master.connect(ctx.destination);
+    const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; this.noise = b;
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 1100; g.gain.value = 0;
+    o.connect(f); o2.connect(f); f.connect(g); g.connect(this.master); o.start(); o2.start(); this.motor = { o, o2, g };
+    return true;
+  },
+  setMotor(v, volts){
+    if (!this.on || !this.ctx) return; const t = this.ctx.currentTime, a = Math.abs(v);
+    this.motor.o.frequency.setTargetAtTime(48 + a * 0.5 + volts * 6, t, 0.06);
+    this.motor.o2.frequency.setTargetAtTime(96 + a * 1.2, t, 0.06);
+    this.motor.g.gain.setTargetAtTime(volts > 0.2 ? 0.006 + Math.min(1, a / VMAX) * 0.035 : 0, t, 0.08);
+  },
+  burst(dur, freq, q, gain, type, delay){
+    if (!this.on || !this.ctx) return; const ctx = this.ctx, t = ctx.currentTime + (delay || 0);
+    const s = ctx.createBufferSource(); s.buffer = this.noise; const f = ctx.createBiquadFilter(); f.type = type || 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+    const g = ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t, Math.random() * 0.5, dur + 0.05);
+  },
+  tone(freq, dur, gain, type, slide){
+    if (!this.on || !this.ctx) return; const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+  },
+  click(i){ this.burst(0.03, 2600 + Math.random() * 900, 1.4, 0.04 + 0.16 * i); },
+  clack(){ this.burst(0.07, 1500, 0.9, 0.5); this.tone(140, 0.09, 0.35, 'triangle', 60); },
+  thud(i){ this.tone(70, 0.3, 0.6 * i, 'sine', 35); this.burst(0.25, 400, 0.5, 0.4 * i, 'lowpass'); },
+  crash(i){ this.burst(0.9, 900, 0.3, 0.3 + 0.5 * i, 'lowpass'); this.thud(0.4 + 0.6 * i); for (let k = 0; k < 5; k++) this.burst(0.05, 3000, 2, 0.2 * i, 'bandpass', 0.1 + k * 0.09 * Math.random()); },
+  chuff(i){ this.burst(0.13, 520, 0.6, 0.12 + 0.25 * i); },
+  bell(){ this.tone(1320, 0.35, 0.1, 'sine'); this.tone(2650, 0.2, 0.03, 'sine'); },
+  chime(){ this.tone(660, 0.25, 0.12, 'sine'); setTimeout(() => this.tone(880, 0.35, 0.12, 'sine'), 140); },
+  hornOn(){
+    if (!this.on || !this.ctx || this.horn) return; const ctx = this.ctx, t = ctx.currentTime;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.06);
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200; f.connect(g); g.connect(this.master);
+    const steam = T.locoKey === 'c38';
+    const freqs = steam ? [740, 932] : [311, 370, 466];
+    const os = freqs.map(fr => { const o = ctx.createOscillator(); o.type = steam ? 'sine' : 'sawtooth'; o.frequency.value = fr; o.connect(f); o.start(); return o; });
+    if (steam) this.burst(0.8, 1800, 0.8, 0.05);
+    this.horn = { g, os };
+  },
+  hornOff(){ if (!this.horn) return; const t = this.ctx.currentTime, h = this.horn; h.g.gain.setTargetAtTime(0, t, 0.05); h.os.forEach(o => o.stop(t + 0.4)); this.horn = null; },
+};
+
+/* Steam puffs */
+const puffTex = canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(240,240,236,0.9)'); gr.addColorStop(1, 'rgba(240,240,236,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+const puffs = [];
+function puff(pos, strength){
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex, transparent: true, depthWrite: false, opacity: 0.8 }));
+  s.position.copy(pos); s.scale.setScalar(10); fxGroup.add(s); puffs.push({ s, t: 0, life: 1 + strength, vy: 30 + 50 * strength });
+}
+function updatePuffs(dt){
+  for (let i = puffs.length - 1; i >= 0; i--){
+    const p = puffs[i]; p.t += dt; const k = p.t / p.life;
+    p.s.position.y += p.vy * dt; p.s.position.x += 8 * dt; p.s.scale.setScalar(10 + 60 * k); p.s.material.opacity = 0.75 * (1 - k);
+    if (k >= 1){ fxGroup.remove(p.s); p.s.material.dispose(); puffs.splice(i, 1); }
+  }
+}
+
+/* =========================================================================
+   Rebuild everything after a layout change
+   ========================================================================= */
+let saveTimer = 0;
+function rebuildTrack(){
+  solveConnections();
+  const keep = new Set();
+  for (const p of L.pieces){
+    const k = pieceKey(p); keep.add(p.id);
+    const m = pieceMeshes.get(p.id);
+    if (m && m.userData.key === k) continue;
+    if (m) trackGroup.remove(m);
+    const nm = buildPieceMesh(p); nm.userData.key = k; trackGroup.add(nm); pieceMeshes.set(p.id, nm);
+  }
+  for (const [id, m] of pieceMeshes) if (!keep.has(id)){ trackGroup.remove(m); pieceMeshes.delete(id); }
+  L.pieces.forEach(setLever);
+  ensureActive(); rebuildSamples(); rebuildMarkers(); rebuildScenery(true); rebuildChips(); updatePartsList(); highlightSelection();
+  T.needsPlace = true; if (mode === 'build') clearTrain();
+  clearTimeout(saveTimer); saveTimer = setTimeout(() => store('chipboard-junction-v1', serialize()), 300);
+}
+function fullRebuild(){
+  for (const [, m] of pieceMeshes) trackGroup.remove(m); pieceMeshes.clear();
+  for (const [, m] of scenMeshes) scenGroup.remove(m); scenMeshes.clear();
+  for (const [, st] of platformState) if (st.group) fxGroup.remove(st.group); platformState.clear();
+  applyFinish(); rebuildTrack(); rebuildScenery(false);
+}
+
+/* =========================================================================
+   Build actions
+   ========================================================================= */
+function layPiece(type){
+  const ap = activePose();
+  if (!ap){ toast('No open end to build from. Click a white arrow, or use New start point.'); return; }
+  pushHistory();
+  const p = addPiece(type, ap, 0);
+  lastAdd = { id: p.id, type, conn: ap, k: 0 };
+  active = { kind: 'end', id: p.id, end: p.type === 'buffer' ? -1 : 1 };
+  if (p.type === 'buffer') active = null;
+  selected = null;
+  rebuildTrack();
+  if (!activePose()) ensureActive();
+  rebuildMarkers();
+  Sound.burst(0.04, 1800, 1, 0.25);
+}
+function flipLast(){
+  if (!lastAdd || !byId(lastAdd.id)) { toast('Lay a piece first, then Flip turns it around.'); return; }
+  const d = PIECES[lastAdd.type]; let type = lastAdd.type, k = lastAdd.k;
+  if (d.flip) type = d.flip;
+  else if (d.point) k = (k + 1) % 3;
+  else { toast('Straights look the same either way round.'); return; }
+  pushHistory();
+  L.pieces = L.pieces.filter(p => p.id !== lastAdd.id);
+  const p = addPiece(type, lastAdd.conn, k);
+  lastAdd = { id: p.id, type, conn: lastAdd.conn, k };
+  active = { kind: 'end', id: p.id, end: k === 0 ? 1 : 0 };
+  rebuildTrack(); if (!activePose()) ensureActive(); rebuildMarkers();
+  if (d.point) toast(['Point joined at its toe.', 'Point joined at its straight end.', 'Point joined at its branch end.'][k]);
+}
+function undo(){
+  if (!history.length){ toast('Nothing to undo.'); return; }
+  deserialize(history.pop()); selected = null; lastAdd = null; fullRebuild();
+}
+function deleteSelected(){
+  if (!selected){ toast('Click a piece of track or scenery to select it first.'); return; }
+  pushHistory();
+  if (selected.kind === 'piece') L.pieces = L.pieces.filter(p => p.id !== selected.id);
+  else L.scenery = L.scenery.filter(s => s.id !== selected.id);
+  const wasHill = selected.kind === 'scenery';
+  selected = null; rebuildTrack(); if (wasHill) rebuildScenery(false);
+}
+function setTool(t){
+  tool = t; placeRot = 0;
+  if (ghost){ scene.remove(ghost); ghost = null; }
+  if (t && t.kind === 'scenery'){ selected = null; highlightSelection(); }
+  document.querySelectorAll('#scenGrid .part').forEach(b => b.setAttribute('aria-pressed', String(!!(t && t.type === b.dataset.type))));
+  $('#bStart').classList.toggle('armed', !!(t && t.kind === 'start'));
+}
+let ghost = null;
+function makeGhost(type){
+  const s = { id: 999999, type, x: 0, y: 0, h: 0, name: SCEN[type].snap && type !== 'goodsshed' ? 'Platform' : undefined };
+  const g = buildScenery(s);
+  g.traverse(o => { if (o.isMesh){ o.material = (Array.isArray(o.material) ? o.material[0] : o.material).clone(); o.material.transparent = true; o.material.opacity = 0.55; o.material.depthWrite = false; o.castShadow = false; } });
+  return g;
+}
+function snapPose(type, x, y){
+  const def = SCEN[type];
+  if (!def.snap) return { x, y, h: placeRot, snapped: false };
+  let best = null, bd = 1e9;
+  for (const s of trackSamples){ const d = (s.x - x) ** 2 + (s.y - y) ** 2; if (d < bd){ bd = d; best = s; } }
+  if (!best || bd > 170 * 170) return { x, y, h: placeRot, snapped: false };
+  const nx = -Math.sin(best.h), ny = Math.cos(best.h);
+  const side = (x - best.x) * nx + (y - best.y) * ny >= 0 ? 1 : -1;
+  return { x: best.x + nx * side * def.snap, y: best.y + ny * side * def.snap, h: normAng(best.h + (side > 0 ? 0 : Math.PI)), snapped: true };
+}
+function placeScenery(type, pose){
+  pushHistory();
+  const s = { id: L.nextId++, type, x: pose.x, y: pose.y, h: pose.h };
+  if (type === 'platform' || type === 'platformLong') s.name = 'Platform ' + (stationList().length + 1);
+  L.scenery.push(s);
+  rebuildScenery(false); rebuildChips();
+  clearTimeout(saveTimer); saveTimer = setTimeout(() => store('chipboard-junction-v1', serialize()), 300);
+}
+
+/* Township sample layout (see guide for the geometry) */
+function buildSample(){
+  L.pieces = []; L.scenery = []; L.nextId = 1; L.finish = 'chipboard';
+  let c = { x: -672, y: -438, h: 0 };
+  const run = (type, n) => { let last = null; for (let i = 0; i < n; i++){ last = addPiece(type, c, 0); c = endPose(last, 1); } return last; };
+  const pr1 = addPiece('pointR', c, 0); c = endPose(pr1, 1);
+  run('straight', 6);
+  const pl1 = addPiece('pointL', c, 1); c = endPose(pl1, 0);
+  run('c2L', 8);
+  run('straight', 2); run('crossing', 1); run('straight', 1);
+  const pr2 = addPiece('pointR', c, 0); c = endPose(pr2, 1);
+  run('straight', 3); run('c2L', 8);
+  c = endPose(pr1, 2); run('c2L', 1); run('straight', 4); run('c2L', 1);
+  c = endPose(pr2, 2); run('c2L', 1); run('straight', 2); addPiece('buffer', c, 0);
+  const S = (type, x, y, h, name) => L.scenery.push({ id: L.nextId++, type, x, y, h: h || 0, name });
+  S('platformLong', 0, -394.5, 0, 'Hillview 1'); S('platformLong', 0, -548, Math.PI, 'Hillview 2');
+  S('platform', -480, 394.5, Math.PI, 'Gumtree Halt');
+  S('station', -120, -338, 0, 'Hillview'); S('signalbox', 420, -386, 0);
+  S('goodsshed', -420, 556.7, 0);
+  S('hill', 880, 0, 0);
+  for (const y of [520, 340, 180]) S('road', 252, y, Math.PI / 2);
+  for (const x of [172, 12, -148, -308, -468]) S('road', x, 100, 0);
+  S('cottage', -90, 165, 0); S('bungalow', -250, 172, 0); S('store', 80, 168, 0);
+  S('hotel', -40, 30, Math.PI); S('cottage', -250, 44, Math.PI); S('cottage', -410, 44, Math.PI);
+  S('church', 390, 190, -Math.PI / 2); S('tank', -860, 480, 0);
+  for (const [x, y] of [[-850, -60], [-900, 130], [-780, 230], [-980, -210], [-1110, -520], [1120, -530], [330, 10], [540, -170], [-560, 230], [500, 330], [-1080, 460]]) S('gum', x, y);
+  S('bushes', 520, 240); S('bushes', -620, -250); S('bushes', 160, -250);
+  S('car', 40, 88, 0); S('car', -170, 112, Math.PI); S('car', 300, 132, Math.PI / 2);
+  S('people', 130, 132); S('people', -60, -300);
+  active = null; lastAdd = null; history = [];
+}
+
+/* =========================================================================
+   Camera
+   ========================================================================= */
+const cam = { tx: 0, ty: 0, tz: 40, r: 2700, th: 0.25, ph: 0.9, phGoal: null, mode: 'orbit' };
+function fitRadius(){ const w = canvas.clientWidth, h = Math.max(1, canvas.clientHeight); const a = w > 760 ? (w - 326) / h : w / (h * 0.58); return a < 1 ? 3400 / Math.max(0.55, a) : 2500 + 600 / a; }
+function applyOrbit(){
+  const sp = Math.sin(cam.ph);
+  camera.position.set(cam.tx + cam.r * sp * Math.sin(cam.th), cam.ty + cam.r * Math.cos(cam.ph), cam.tz + cam.r * sp * Math.cos(cam.th));
+  camera.lookAt(cam.tx, cam.ty, cam.tz);
+}
+function setView(v){
+  cam.mode = v;
+  document.querySelectorAll('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+  camera.near = v === 'cab' ? 1 : 5; camera.fov = v === 'cab' ? 62 : 40; camera.updateProjectionMatrix();
+  if (v === 'follow'){ cam.r = Math.min(cam.r, 800); cam.ph = 0.95; }
+  if (v === 'orbit'){ cam.tx = 0; cam.ty = 0; cam.tz = 40; cam.r = fitRadius(); }
+  rebuildChips();
+}
+const tmpV = new THREE.Vector3();
+function updateCamera(dt){
+  if (cam.phGoal != null){ cam.ph += (cam.phGoal - cam.ph) * Math.min(1, dt * 4); if (Math.abs(cam.phGoal - cam.ph) < 0.002) cam.phGoal = null; }
+  const lead = leadVehicle();
+  if (mode === 'play' && cam.mode === 'cab' && lead){
+    const fwd = T.dirRev ? -1 : 1;
+    const yaw = lead.g.rotation.y, rl = lead.g.rotation.x || 0;
+    const ex = lead.def.kind === 'loco' ? (lead.U.cabX || 70) * fwd : fwd * (lead.def.len / 2 - 8);
+    const lx = lead.g.position.x + Math.cos(yaw) * ex, lz = lead.g.position.z - Math.sin(yaw) * ex;
+    camera.position.set(lx, lead.g.position.y + (lead.U.eye || 44) + Math.abs(Math.sin(rl)) * 10, lz);
+    let look;
+    if (T.state === 'running'){
+      const c = clone(fwd > 0 ? lead.front : lead.rear); advance(c, fwd * 320, null, true); const p = cursorPose(c);
+      look = tmpV.set(p.x, 26, -p.y);
+    } else look = tmpV.set(lx + Math.cos(yaw) * fwd * 300, 20, lz - Math.sin(yaw) * fwd * 300);
+    if (!cam.look) cam.look = look.clone(); cam.look.lerp(look, Math.min(1, dt * 6));
+    camera.lookAt(cam.look);
+    return;
+  }
+  cam.look = null;
+  if (mode === 'play' && cam.mode === 'follow' && lead){
+    const k = Math.min(1, dt * 3), mid = T.vehicles[Math.floor((T.vehicles.length - 1) / 2)].g.position;
+    cam.tx += ((lead.g.position.x + mid.x) / 2 - cam.tx) * k; cam.tz += ((lead.g.position.z + mid.z) / 2 - cam.tz) * k; cam.ty += (lead.g.position.y + 30 - cam.ty) * k;
+  }
+  applyOrbit();
+}
+
+/* =========================================================================
+   Pointer input
+   ========================================================================= */
+const raycaster = new THREE.Raycaster(); const ndc = new THREE.Vector2(); const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+function setNdc(e){ const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); raycaster.setFromCamera(ndc, camera); }
+function boardPoint(e){ setNdc(e); const p = new THREE.Vector3(); if (!raycaster.ray.intersectPlane(plane, p)) return null; return { x: p.x, y: -p.z }; }
+function pick(e, group, test){
+  setNdc(e); const hits = raycaster.intersectObjects(group.children, true);
+  for (const h of hits){ const r = test(h.object); if (r != null) return r; }
+  return null;
+}
+const pickPiece = (e) => pick(e, trackGroup, o => o.userData.hit ? o.userData.pieceId : null);
+const pickScen = (e) => pick(e, scenGroup, o => o.userData.sceneryId != null ? o.userData.sceneryId : null);
+const pickMarker = (e) => pick(e, markerGroup, o => o.userData.marker || null);
+
+const ptrs = new Map(); let down = null; let pinch = null;
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1){
+    down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, moved: false, pan: e.button === 2 || e.shiftKey, drag: null };
+    if (mode === 'build' && !tool && selected && selected.kind === 'scenery'){ const id = pickScen(e); if (id === selected.id){ down.drag = id; pushHistory(); } }
+  } else if (ptrs.size === 2){
+    const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; if (down) down.moved = true;
+  }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (tool && tool.kind === 'scenery' && e.pointerType !== 'touch') moveGhost(e);
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2 && pinch){
+    const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    cam.r = clamp(cam.r * pinch.d / Math.max(1, d), 120, 7000); userZoomed = true; panBy(cx - pinch.cx, cy - pinch.cy); pinch = { d, cx, cy }; return;
+  }
+  if (!down) return;
+  const dx = e.clientX - down.lx, dy = e.clientY - down.ly; down.lx = e.clientX; down.ly = e.clientY;
+  if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) down.moved = true;
+  if (!down.moved) return;
+  if (down.drag){
+    const bp = boardPoint(e); const s = scById(down.drag);
+    if (bp && s){ const sp = SCEN[s.type].snap ? snapPose(s.type, bp.x, bp.y) : { x: bp.x, y: bp.y, h: s.h }; s.x = sp.x; s.y = sp.y; s.h = sp.h; const m = scenMeshes.get(s.id); if (m){ m.position.set(s.x, 0, -s.y); if (s.type !== 'hill') m.rotation.y = s.h; } updateSelectionBox(); }
+    return;
+  }
+  if (cam.mode === 'cab' && mode === 'play') return;
+  if (down.pan) panBy(dx, dy);
+  else { cam.th -= dx * 0.006; cam.ph = clamp(cam.ph - dy * 0.005, 0.06, 1.48); cam.phGoal = null; }
+});
+function endPtr(e){
+  const wasDown = down && ptrs.size === 1;
+  ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+  if (wasDown){
+    if (down.drag){ const s = scById(down.drag); if (down.moved){ if (s && s.type === 'hill') rebuildScenery(false); else { const st = s && platformState.get(s.id); if (st) updatePassengerFigures(true); } clearTimeout(saveTimer); saveTimer = setTimeout(() => store('chipboard-junction-v1', serialize()), 300); } else history.pop(); }
+    else if (!down.moved && e.type === 'pointerup') handleClick(e);
+    down = null;
+  }
+  if (!ptrs.size) down = null;
+}
+canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (cam.mode === 'cab' && mode === 'play') return; cam.r = clamp(cam.r * Math.exp(e.deltaY * 0.0012), 120, 7000); userZoomed = true; }, { passive: false });
+function panBy(dx, dy){
+  const k = cam.r * 0.0011;
+  const rx = Math.cos(cam.th), rz = -Math.sin(cam.th); const fx = -Math.sin(cam.th), fz = -Math.cos(cam.th);
+  cam.tx += -dx * k * rx + dy * k * fx; cam.tz += -dx * k * rz + dy * k * fz;
+  cam.tx = clamp(cam.tx, -2000, 2000); cam.tz = clamp(cam.tz, -1500, 1500);
+  if (cam.mode === 'follow') setView('orbit');
+}
+function moveGhost(e){
+  const bp = boardPoint(e); if (!bp) return;
+  if (!ghost){ ghost = makeGhost(tool.type); scene.add(ghost); }
+  const sp = snapPose(tool.type, bp.x, bp.y);
+  ghost.position.set(sp.x, 0, -sp.y); ghost.rotation.y = tool.type === 'hill' ? 0 : sp.h; ghost.userData.pose = sp;
+}
+function handleClick(e){
+  if (mode === 'play'){
+    const id = pickPiece(e); const p = id && byId(id);
+    if (p && p.def.point) throwPoint(p);
+    return;
+  }
+  if (tool && tool.kind === 'scenery'){
+    const bp = boardPoint(e); if (!bp) return;
+    const sp = snapPose(tool.type, bp.x, bp.y);
+    if (Math.abs(sp.x) > BOARD_W / 2 + 50 || Math.abs(sp.y) > BOARD_D / 2 + 50){ toast('That is off the edge of the board.'); return; }
+    placeScenery(tool.type, sp); moveGhost(e); return;
+  }
+  if (tool && tool.kind === 'start'){
+    const bp = boardPoint(e); if (!bp) return;
+    active = { kind: 'free', x: bp.x, y: bp.y, h: startHeading }; setTool(null); rebuildMarkers();
+    toast('Start point set. Q and E turn it; lay a piece to begin.'); return;
+  }
+  const mk = pickMarker(e);
+  if (mk){ active = { kind: 'end', id: mk.id, end: mk.end }; rebuildMarkers(); return; }
+  const sid = pickScen(e);
+  if (sid != null){ selected = { kind: 'scenery', id: sid }; highlightSelection(); return; }
+  const pid = pickPiece(e);
+  if (pid != null){ selected = { kind: 'piece', id: pid }; highlightSelection(); return; }
+  selected = null; highlightSelection();
+}
+let startHeading = 0;
+let selBox = null;
+function updateSelectionBox(){
+  if (selBox){ scene.remove(selBox); selBox = null; }
+  if (selected && selected.kind === 'scenery'){ const m = scenMeshes.get(selected.id); if (m){ selBox = new THREE.BoxHelper(m, 0xffc933); scene.add(selBox); } }
+}
+function highlightSelection(){
+  for (const [id, m] of pieceMeshes) m.userData.hl.opacity = selected && selected.kind === 'piece' && selected.id === id ? 0.45 : 0;
+  updateSelectionBox();
+}
+function throwPoint(p){
+  p.state = p.state ? 0 : 1; setLever(p); Sound.clack(); rebuildChips();
+  clearTimeout(saveTimer); saveTimer = setTimeout(() => store('chipboard-junction-v1', serialize()), 300);
+}
+
+/* Point chips */
+let chips = [];
+const ICON_STRAIGHT = '<svg viewBox="0 0 14 14"><path d="M2 12 L2 2" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>';
+const ICON_BRANCH = '<svg viewBox="0 0 14 14"><path d="M3 12 Q3 6 11 2" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>';
+function rebuildChips(){
+  const host = $('#chips'); host.innerHTML = ''; chips = [];
+  if (cam.mode === 'cab' && mode === 'play') return;
+  let n = 0;
+  for (const p of L.pieces){
+    if (!p.def.point) continue; n++;
+    const b = document.createElement('button'); b.className = 'pchip' + (p.state ? ' branch' : '');
+    b.innerHTML = (p.state ? ICON_BRANCH : ICON_STRAIGHT) + 'P' + n;
+    b.title = `Point ${n}: set to ${p.state ? 'branch' : 'straight'}. Click to change.`;
+    b.addEventListener('click', () => throwPoint(p));
+    host.appendChild(b); chips.push({ b, p });
+  }
+}
+const chipV = new THREE.Vector3();
+function positionChips(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  for (const c of chips){
+    const m = pieceMeshes.get(c.p.id); if (!m){ c.b.hidden = true; continue; }
+    chipV.copy(m.userData.leverPos).applyMatrix4(m.matrixWorld).project(camera);
+    const vis = chipV.z < 1 && Math.abs(chipV.x) < 1.1 && Math.abs(chipV.y) < 1.1;
+    c.b.hidden = !vis;
+    if (vis){ c.b.style.left = ((chipV.x + 1) / 2 * w) + 'px'; c.b.style.top = ((1 - chipV.y) / 2 * h) + 'px'; }
+  }
+}
+
+/* =========================================================================
+   UI wiring
+   ========================================================================= */
+function toast(msg, kind){
+  const host = $('#toast'); const d = document.createElement('div'); d.className = 'toast' + (kind ? ' ' + kind : ''); d.textContent = msg;
+  host.appendChild(d); while (host.children.length > 3) host.removeChild(host.firstChild);
+  setTimeout(() => d.remove(), kind === 'bad' ? 6000 : 3600);
+}
+function icon(type){
+  const S = (d) => `<svg viewBox="0 0 30 30" aria-hidden="true"><path d="${d}" fill="none" stroke="#f0e4c8" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+  switch (type){
+    case 'straight': return S('M15 4 V26');
+    case 'double': return S('M15 2 V28 M11 15 H19');
+    case 'short': return S('M15 11 V19');
+    case 'c1L': case 'c2L': return S(type === 'c1L' ? 'M20 27 Q20 10 6 5' : 'M20 27 Q19 12 9 4');
+    case 'c1R': case 'c2R': return S(type === 'c1R' ? 'M10 27 Q10 10 24 5' : 'M10 27 Q11 12 21 4');
+    case 'pointL': return S('M18 27 V3 M18 27 Q18 12 6 5');
+    case 'pointR': return S('M12 27 V3 M12 27 Q12 12 24 5');
+    case 'crossing': return S('M15 3 V27 M4 12 H26 M4 18 H26');
+    case 'buffer': return S('M15 27 V9 M8 7 H22');
+  }
+  return S('M5 22 L15 8 L25 22 Z');
+}
+function scenIcon(type){
+  const P = { platform: 'M3 18 H27 V22 H3 Z', platformLong: 'M1 18 H29 V22 H1 Z', station: 'M4 24 V14 L15 7 L26 14 V24 Z M4 16 H26', signalbox: 'M9 25 V12 H21 V25 M7 12 L15 6 L23 12', goodsshed: 'M3 25 V13 L15 6 L27 13 V25 M9 25 V18 H21 V25',
+    cottage: 'M6 25 V14 L15 7 L24 14 V25 Z M12 25 V19 H18 V25', bungalow: 'M4 25 V15 L15 9 L26 15 V25 Z', store: 'M5 25 V10 H25 V25 M5 15 H25', hotel: 'M4 25 V6 H26 V25 M4 15 H26', church: 'M5 25 V15 L12 10 L19 15 V25 M19 25 V9 L23 3 L27 9 V25',
+    tank: 'M8 8 H22 V16 H8 Z M9 16 L7 26 M21 16 L23 26', gum: 'M15 27 V13 M15 15 L9 9 M15 13 L21 8 M5 10 Q15 0 25 10 Q15 16 5 10', bushes: 'M4 22 Q9 12 15 20 Q21 12 26 22 Z', car: 'M3 20 H27 V15 L21 14 L18 9 H10 L7 14 H3 Z',
+    people: 'M10 8 V26 M20 8 V26 M10 8 m-2 -3 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0', road: 'M4 9 H26 M4 21 H26 M8 15 H12 M18 15 H22', hill: 'M2 25 Q15 0 28 25 M11 25 V19 Q15 14 19 19 V25' };
+  return `<svg viewBox="0 0 30 30" aria-hidden="true"><path d="${P[type] || ''}" fill="none" stroke="#f0e4c8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+function partButton(type, def, onClick, host){
+  const b = document.createElement('button'); b.className = 'part'; b.dataset.type = type;
+  b.innerHTML = (host === '#trackGrid' ? icon(type) : scenIcon(type)) + `<span><b>${def.name}</b><small>${def.sub}</small></span>`;
+  b.addEventListener('click', onClick); $(host).appendChild(b);
+}
+Object.entries(PIECES).forEach(([k, d]) => partButton(k, d, () => { setTool(null); layPiece(k); }, '#trackGrid'));
+Object.entries(SCEN).forEach(([k, d]) => partButton(k, d, () => { if (tool && tool.type === k) setTool(null); else { setTool({ kind: 'scenery', type: k }); toast(`Click the board to place: ${d.name.toLowerCase()}.`); } }, '#scenGrid'));
+$('#bFlip').onclick = flipLast; $('#bUndo').onclick = undo; $('#bDel').onclick = deleteSelected;
+$('#bStart').onclick = () => { if (tool && tool.kind === 'start') setTool(null); else { setTool({ kind: 'start' }); toast('Click the board where the new track should start.'); } };
+$('#bRot').onclick = rotateThing; $('#bDone').onclick = () => setTool(null);
+function rotateThing(dir){
+  const step = (dir === -1 ? -1 : 1) * 15 * DEG;
+  if (tool && tool.kind === 'scenery'){ placeRot = normAng(placeRot + step); if (ghost && ghost.userData.pose && !ghost.userData.pose.snapped){ ghost.rotation.y = placeRot; ghost.userData.pose.h = placeRot; } return; }
+  if (selected && selected.kind === 'scenery'){ const s = scById(selected.id); if (!s) return; pushHistory(); s.h = normAng(s.h + step); const m = scenMeshes.get(s.id); if (m && s.type !== 'hill') m.rotation.y = s.h; updateSelectionBox(); updatePassengerFigures(true); store('chipboard-junction-v1', serialize()); return; }
+  if (active && active.kind === 'free'){ active.h = normAng(active.h + (dir === -1 ? -1 : 1) * ANG); startHeading = active.h; rebuildMarkers(); return; }
+  toast('Select a scenery item to rotate it.');
+}
+document.querySelectorAll('#finishSeg button').forEach(b => b.addEventListener('click', () => { L.finish = b.dataset.finish; applyFinish(); store('chipboard-junction-v1', serialize()); }));
+$('#bSample').onclick = () => { pushHistory(); const h = history.slice(); buildSample(); history = h; fullRebuild(); toast('Township layout loaded. Undo brings your own layout back.'); };
+let clearArm = 0;
+$('#bClear').onclick = () => {
+  const b = $('#bClear');
+  if (Date.now() - clearArm > 3000){ clearArm = Date.now(); b.textContent = 'Click again to clear'; setTimeout(() => { b.textContent = 'Clear board'; }, 3000); return; }
+  pushHistory(); L.pieces = []; L.scenery = []; active = null; lastAdd = null; selected = null; b.textContent = 'Clear board'; clearArm = 0; fullRebuild();
+  toast('Board cleared. Lay your first piece at the yellow arrow.');
+};
+function updatePartsList(){
+  const counts = {}; let total = 0;
+  for (const p of L.pieces){ counts[p.type] = (counts[p.type] || 0) + 1; total += p.def.routes[0].len; }
+  const lines = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<strong>${String(n).padStart(2, ' ')} ×</strong> ${PIECES[k].name}, ${PIECES[k].sub}`);
+  $('#partsList').innerHTML = (lines.length ? lines.join('<br>') : 'No track laid yet.') + `<br>Track length: <strong>${(total / 1000).toFixed(2)} m</strong> (${(total * SCALE / 1000 / 1000).toFixed(2)} km at 1:87)`;
+}
+
+/* Mode switching */
+function setMode(m){
+  mode = m;
+  $('#modeBuild').setAttribute('aria-selected', String(m === 'build')); $('#modePlay').setAttribute('aria-selected', String(m === 'play'));
+  $('#buildPanel').hidden = m !== 'build'; $('#playPanel').hidden = m !== 'play';
+  setTool(null); selected = null; highlightSelection();
+  if (m === 'play'){
+    if (T.needsPlace || T.state === 'none'){
+      if (!placeTrain()){ toast('There is nowhere long enough to put the train. Lay more track first.', 'bad'); }
+    }
+    cam.phGoal = 0.95; markerGroup.clear();
+    setThrottle(0);
+  } else {
+    setThrottle(0); T.v = 0; cam.phGoal = 0.62;
+    if (cam.mode !== 'orbit') setView('orbit');
+    rebuildMarkers();
+  }
+  rebuildChips(); updateTrainCard(); resize();
+}
+$('#modeBuild').onclick = () => setMode('build'); $('#modePlay').onclick = () => setMode('play');
+
+/* Controller knob */
+const knob = $('#knob');
+(function drawKnob(){
+  let s = '<defs><radialGradient id="kg" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#5a4638"/><stop offset=".6" stop-color="#2a1f19"/><stop offset="1" stop-color="#140e0b"/></radialGradient></defs>';
+  s += '<circle cx="100" cy="100" r="96" fill="#120c09"/>';
+  for (let i = 0; i <= 10; i++){
+    const a = (-135 + i * 27) * DEG, x1 = 100 + Math.sin(a) * 88, y1 = 100 - Math.cos(a) * 88, x2 = 100 + Math.sin(a) * 78, y2 = 100 - Math.cos(a) * 78;
+    s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#e8dcc0" stroke-width="${i % 5 ? 1.5 : 3}"/>`;
+    if (i % 2 === 0){ const tx = 100 + Math.sin(a) * 67, ty = 100 - Math.cos(a) * 67 + 4; s += `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" font-family="Chivo Mono, monospace" font-size="11" font-weight="700" fill="#e8dcc0">${i === 0 ? 'OFF' : i}</text>`; }
+  }
+  s += '<g id="knobRot"><circle cx="100" cy="100" r="52" fill="url(#kg)" stroke="#070504" stroke-width="2"/>';
+  for (let i = 0; i < 24; i++){ const a = i * 15 * DEG; s += `<line x1="${(100 + Math.sin(a) * 47).toFixed(1)}" y1="${(100 - Math.cos(a) * 47).toFixed(1)}" x2="${(100 + Math.sin(a) * 52).toFixed(1)}" y2="${(100 - Math.cos(a) * 52).toFixed(1)}" stroke="#0a0706" stroke-width="2"/>`; }
+  s += '<circle cx="100" cy="100" r="36" fill="#2c211b"/><rect x="97" y="52" width="6" height="30" rx="3" fill="#f0e4c8"/></g>';
+  knob.innerHTML = s;
+})();
+function setThrottle(v){
+  T.throttle = clamp(v, 0, 1);
+  $('#knobRot').setAttribute('transform', `rotate(${(-135 + T.throttle * 270).toFixed(1)} 100 100)`);
+  knob.setAttribute('aria-valuenow', (T.throttle * 10).toFixed(1));
+}
+let knobDrag = false;
+function knobFromEvent(e){ const r = knob.getBoundingClientRect(); const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); let a = Math.atan2(dx, -dy) / DEG; a = clamp(a, -135, 135); setThrottle((a + 135) / 270); }
+knob.addEventListener('pointerdown', (e) => { knobDrag = true; knob.setPointerCapture(e.pointerId); knobFromEvent(e); ensureSound(); });
+knob.addEventListener('pointermove', (e) => { if (knobDrag) knobFromEvent(e); });
+knob.addEventListener('pointerup', () => { knobDrag = false; });
+knob.addEventListener('keydown', (e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowRight'){ setThrottle(T.throttle + 0.05); e.preventDefault(); } if (e.key === 'ArrowDown' || e.key === 'ArrowLeft'){ setThrottle(T.throttle - 0.05); e.preventDefault(); } });
+function toggleDir(){
+  if (Math.abs(T.v) > 40) toast('Reversing at speed is hard on the motor. The train will brake first.');
+  T.dirRev = !T.dirRev; const b = $('#dirSwitch'); b.setAttribute('aria-pressed', String(T.dirRev)); b.setAttribute('aria-label', 'Direction: ' + (T.dirRev ? 'reverse' : 'forward'));
+  $('#dirF').classList.toggle('on', !T.dirRev); $('#dirR').classList.toggle('on', T.dirRev);
+}
+$('#dirSwitch').onclick = toggleDir;
+$('#bStop').onclick = () => setThrottle(0);
+const hornBtn = $('#bHorn');
+hornBtn.addEventListener('pointerdown', () => { ensureSound(); Sound.hornOn(); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => hornBtn.addEventListener(ev, () => Sound.hornOff()));
+$('#bRerail').onclick = () => { setThrottle(0); if (placeTrain()) toast('Back on the rails.', 'good'); else toast('There is nowhere long enough to put the train.', 'bad'); };
+$('#selLoco').onchange = (e) => { T.locoKey = e.target.value; T.onboard = []; placeTrain(); updateTrainCard(); updateTally(); };
+$('#selConsist').onchange = (e) => { T.consist = e.target.value; T.onboard = []; placeTrain(); updateTrainCard(); updateTally(); };
+document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+function updateTrainCard(){ const n = trainSpec().length; $('#trainCard').textContent = LOCO_INFO[T.locoKey] + ` Train: ${n} vehicle${n > 1 ? 's' : ''}.`; }
+function updateTally(){ $('#tDeliv').textContent = T.delivered; $('#tOn').textContent = T.onboard.length; $('#tGoods').textContent = T.goods; $('#tDerail').textContent = T.derails; }
+
+/* Sound toggle */
+function ensureSound(){ if (!Sound.on) return; if (Sound.ctx && Sound.ctx.state === 'suspended') Sound.ctx.resume(); }
+$('#btnSound').onclick = () => {
+  if (!Sound.on){ if (!Sound.init()){ toast('This browser has no Web Audio, so sound is unavailable.'); return; } Sound.ctx.resume(); Sound.on = true; }
+  else { Sound.on = false; if (Sound.motor) Sound.motor.g.gain.value = 0; Sound.hornOff(); }
+  const b = $('#btnSound'); b.textContent = Sound.on ? 'Sound on' : 'Sound off'; b.setAttribute('aria-pressed', String(Sound.on));
+};
+
+/* Guide */
+$('#btnGuide').onclick = () => { $('#guide').hidden = false; $('#guideClose').focus(); };
+$('#guideClose').onclick = () => { $('#guide').hidden = true; store('chipboard-junction-seen', '1'); };
+$('#guide').addEventListener('click', (e) => { if (e.target.id === 'guide'){ $('#guide').hidden = true; store('chipboard-junction-seen', '1'); } });
+
+/* Keyboard */
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (!$('#guide').hidden){ if (e.key === 'Escape') $('#guide').hidden = true; return; }
+  const k = e.key.toLowerCase();
+  if (mode === 'build'){
+    if (k === 'f') flipLast();
+    else if (k === 'z' || (k === 'backspace' && !selected)) { e.preventDefault(); undo(); }
+    else if (k === 'delete' || k === 'backspace') { e.preventDefault(); deleteSelected(); }
+    else if (k === 'r') rotateThing(1);
+    else if (k === 'q') rotateThing(1);
+    else if (k === 'e') rotateThing(-1);
+    else if (k === 'escape') { setTool(null); selected = null; highlightSelection(); }
+  } else {
+    if (e.target === knob) return;
+    if (k === 'arrowup'){ setThrottle(T.throttle + 0.05); e.preventDefault(); }
+    else if (k === 'arrowdown'){ setThrottle(T.throttle - 0.05); e.preventDefault(); }
+    else if (k === ' '){ setThrottle(0); e.preventDefault(); }
+    else if (k === 'd') toggleDir();
+    else if (k === 'h' && !e.repeat){ ensureSound(); Sound.hornOn(); }
+    else if (k === 'c'){ const order = ['orbit', 'follow', 'cab']; setView(order[(order.indexOf(cam.mode) + 1) % 3]); }
+  }
+});
+window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() === 'h') Sound.hornOff(); });
+
+/* =========================================================================
+   Main loop
+   ========================================================================= */
+const ev = { joints: 0, sprung: [] };
+let lastT = performance.now(), clickBudget = 0;
+function stepTrain(dt){
+  const volts = T.throttle * 12;
+  const drive = Math.max(0, (volts - 2) / 10);           // motors stall below ~2 V
+  const target = drive * VMAX * (T.dirRev ? -1 : 1);
+  const tau = Math.sign(target) !== Math.sign(T.v) && Math.abs(T.v) > 1 ? 0.25 : (T.locoKey === 'c38' ? 0.6 : 0.45);
+  T.v += (target - T.v) * Math.min(1, dt / tau);
+  if (Math.abs(T.v) < 0.5 && target === 0) T.v = 0;
+  const ds = T.v * dt;
+  if (T.state !== 'running'){ Sound.setMotor(0, volts); return; }
+  ev.joints = 0; ev.sprung = [];
+  let maxLeft = 0, hit = null;
+  for (const c of T.pivots){ c.hit = null; c.left = advance(c, ds, ev); if (c.left > maxLeft) maxLeft = c.left; if (c.hit) hit = c.hit; }
+  if (maxLeft > 0){
+    for (const c of T.pivots){ const back = maxLeft - c.left; if (back > 0) advance(c, -Math.sign(ds) * back, null, true); }
+  }
+  T.odo += ds - Math.sign(ds) * maxLeft;
+  ev.sprung.forEach(p => { setLever(p); Sound.clack(); });
+  if (ev.sprung.length) rebuildChips();
+  if (ev.joints && Sound.on){ const n = Math.min(ev.joints, 3); for (let i = 0; i < n; i++) Sound.burst(0.03, 2600 + Math.random() * 800, 1.4, 0.03 + 0.14 * Math.min(1, Math.abs(T.v) / VMAX), 'bandpass', i * 0.012); }
+  poseTrain(ds);
+  if (hit === 'end'){ derail('The train ran off the end of the track!'); return; }
+  if (hit === 'buffer'){
+    if (Math.abs(T.v) > 200){ derail('Crashed through the buffer stop!'); return; }
+    if (Math.abs(T.v) > 20){ Sound.thud(0.4); toast('Bump! Stopped at the buffers.'); }
+    T.v = 0;
+  }
+  // derailment: vehicles pulled apart (point thrown under the train)
+  for (let i = 0; i < T.vehicles.length; i++){
+    const v = T.vehicles[i];
+    const f = cursorPose(v.front), r = cursorPose(v.rear);
+    const d = Math.hypot(f.x - r.x, f.y - r.y);
+    if (d < v.spacing - 8 || d > v.spacing + 3){ derail('A point changed under the train and split it!'); return; }
+    if (i < T.vehicles.length - 1){ const n = cursorPose(T.vehicles[i + 1].front); const g = Math.hypot(r.x - n.x, r.y - n.y); if (g > v.gapNext + 4 || g < v.gapNext - 16){ derail('A point changed under the train and split it!'); return; } }
+  }
+  // overspeed on curves
+  const amax = T.locoKey === 'c38' ? 820 : 900;
+  let worst = 0, side = 1;
+  for (const c of T.pivots){ const p = cursorPose(c); const a = T.v * T.v * Math.abs(p.k); if (a > worst){ worst = a; side = Math.sign(p.k) || 1; } }
+  if (worst > amax){ T.tipT += dt; if (T.tipT > 0.12){ derail('Too fast on the curve! The train tipped over.', { side: -side }); return; } } else T.tipT = 0;
+  // steam
+  const lead = T.vehicles[0];
+  if (lead && lead.U.steam && Math.abs(T.v) > 1){
+    T.chuffAcc += Math.abs(ds) - maxLeft;
+    const per = 2 * Math.PI * lead.U.driverR / 4;
+    if (T.chuffAcc > per){ T.chuffAcc %= per; const st = 0.3 + 0.7 * T.throttle; Sound.chuff(st); puff(lead.g.localToWorld(lead.U.chimney.clone()), st); }
+  }
+  // station stops
+  if (Math.abs(T.v) < 1){ T.stopT += dt; if (T.stopT > 1.2 && T.movedSinceStop > 150){ T.movedSinceStop = 0; serveStops(); } }
+  else { T.stopT = 0; T.movedSinceStop += Math.abs(ds); }
+  Sound.setMotor(T.v, volts);
+}
+function tickPlatforms(dt){
+  for (const s of stationList()){
+    const st = pState(s); st.spawnT -= dt;
+    if (st.spawnT <= 0){ st.spawnT = 6 + rnd() * 8; if (st.waiting < 9){ st.waiting++; } }
+  }
+  updatePassengerFigures();
+}
+function frame(now){
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; const t = now / 1000;
+  if (mode === 'play'){
+    stepTrain(dt);
+    if (T.state === 'derailed') updateDerailed(dt);
+    tickPlatforms(dt);
+    $('#volts').textContent = (T.throttle * 12).toFixed(1) + ' V';
+    $('#kmh').textContent = Math.round(Math.abs(T.v) * KMH) + ' km/h';
+  } else if (Sound.on) Sound.setMotor(0, 0);
+  updateCrossings(dt, t);
+  updatePuffs(dt);
+  if (mode === 'build'){ markerGroup.children.forEach(m => { if (m.material === markYellow) m.position.y = 10 + 3 * Math.sin(t * 5); }); }
+  updateCamera(dt);
+  renderer.render(scene, camera);
+  positionChips();
+  requestAnimationFrame(frame);
+}
+function resize(){
+  const w = canvas.clientWidth, h = Math.max(1, canvas.clientHeight);
+  renderer.setSize(w, h, false);
+  // keep the board centred in the space beside the side panel on wide screens
+  if (w > 760){
+    const off = 326; camera.aspect = (w + off) / h;
+    camera.setViewOffset(w + off, h, mode === 'play' ? off : 0, 0, w, h);
+  } else {
+    // phones: the bottom sheet covers roughly half the screen, so centre the board above it
+    const off = Math.round(h * 0.42); camera.aspect = w / (h + off);
+    camera.setViewOffset(w, h + off, 0, off, w, h);
+  }
+  camera.updateProjectionMatrix();
+}
+let userZoomed = false;
+window.addEventListener('resize', () => { resize(); if (cam.mode === 'orbit' && !userZoomed) cam.r = fitRadius(); });
+
+/* =========================================================================
+   Boot
+   ========================================================================= */
+function boot(data){
+  const saved = (data && data.layout) || load('chipboard-junction-v1');
+  let ok = false;
+  if (saved){ try { deserialize(saved); ok = L.pieces.length > 0 || L.scenery.length > 0; } catch (e) { ok = false; } }
+  if (!ok) buildSample();
+  resize(); cam.r = fitRadius(); cam.ph = 0.62;
+  fullRebuild(); setView('orbit'); setMode('build'); updateTally(); updateTrainCard();
+  if (!load('chipboard-junction-seen')) $('#guide').hidden = false;
+  requestAnimationFrame(frame);
+}
+if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ layout: serialize() }));
+if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(boot);
+else boot((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
+</body>
+</html>
