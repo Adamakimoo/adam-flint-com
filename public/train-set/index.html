@@ -116,7 +116,8 @@ kbd{font-family:var(--mono);font-size:.68rem;padding:0 4px;border-radius:3px;bac
 .ctl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .ctl-row .btn{text-align:center}
 .btn.horn{background:var(--signal);color:#fff;border-color:transparent}
-select{width:100%;background:var(--bakelite-2);border:1px solid rgba(240,228,200,.14);border-radius:8px;padding:7px 8px;font-size:.85rem}
+select,input[type=text]{width:100%;background:var(--bakelite-2);border:1px solid rgba(240,228,200,.14);border-radius:8px;padding:7px 8px;font-size:.85rem;color:var(--cream)}
+input[type=text]:focus{border-color:var(--brass);outline:none}
 .field{display:flex;flex-direction:column;gap:4px}
 .field label{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim)}
 .tally{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;font-variant-numeric:tabular-nums}
@@ -206,6 +207,10 @@ select{width:100%;background:var(--bakelite-2);border:1px solid rgba(240,228,200
       <button class="btn" id="bRot">Rotate 15°<kbd>R</kbd></button>
       <button class="btn" id="bDone">Stop placing<kbd>Esc</kbd></button>
     </div>
+    <div class="field" id="nameField" hidden>
+      <label for="nameIn" id="nameLbl">Name on the sign</label>
+      <input id="nameIn" type="text" maxlength="18" autocomplete="off" spellcheck="false">
+    </div>
     <span class="tape blue">Board</span>
     <div class="seg" id="finishSeg" role="group" aria-label="Board finish">
       <button data-finish="chipboard">Bare chipboard</button>
@@ -242,6 +247,11 @@ select{width:100%;background:var(--bakelite-2);border:1px solid rgba(240,228,200
       <select id="selLoco">
         <option value="44">NSW 44 class diesel (Indian red)</option>
         <option value="c38">NSW C38 class 4-6-2 steam (green)</option>
+        <option value="42">NSW 42 class streamlined diesel (maroon)</option>
+        <option value="422">NSW 422 class diesel (red)</option>
+        <option value="s">Victorian S class streamlined diesel (blue and gold)</option>
+        <option value="b">Victorian B class double-ended diesel (blue and gold)</option>
+        <option value="930">South Australian 930 class diesel (maroon and silver)</option>
       </select></div>
     <div class="field"><label for="selConsist">Consist</label>
       <select id="selConsist">
@@ -278,7 +288,7 @@ select{width:100%;background:var(--bakelite-2);border:1px solid rgba(240,228,200
         <li>Curves come in 1st radius (371 mm) and 2nd radius (438 mm). Sixteen curves make a full circle.</li>
         <li><b>Flip last</b> swaps a curve left/right, or turns a point around so you can join into it from the other end.</li>
         <li>When two ends meet within a few millimetres they join automatically, the way real sectional track has a little play in the joiners.</li>
-        <li>Add platforms, a station, houses, gum trees and a hill with a tunnel. Drag, rotate or delete anything you have placed.</li>
+        <li>Add platforms, a station, houses, gum trees and a hill with a tunnel. Drag, rotate or delete anything you have placed. Select a platform or the station building and type its name in the box; the name appears on its sign.</li>
       </ol>
       <h3>Playing</h3>
       <ol>
@@ -296,12 +306,17 @@ select{width:100%;background:var(--bakelite-2);border:1px solid rgba(240,228,200
         <li>Lima entered the Australian market in 1970 and made NSW 38, 42, 44 and 422 class models, Victorian S and B class, the SA 930 class and Commonwealth Railways stainless steel carriages. Source: <a href="https://en.wikipedia.org/wiki/Lima_(models)" target="_blank" rel="noopener">Wikipedia, Lima (models)</a>.</li>
         <li>The NSW 44 class: 100 Alco-design Co-Co diesel-electrics built by AE Goodwin, Auburn, 1957 to 1967; 17.81 m over couplers; 80 mph (129 km/h). The model here is 205 mm long, which is 17.81 m at 1:87. Source: <a href="https://en.wikipedia.org/wiki/New_South_Wales_44_class_locomotive" target="_blank" rel="noopener">Wikipedia, NSW 44 class</a>.</li>
         <li>The NSW C38 class: 30 Pacific (4-6-2) express passenger engines built 1943 to 1949; later repainted bottle green, with 3801 and 3830 returned to green in the 1960s. Source: <a href="https://en.wikipedia.org/wiki/New_South_Wales_C38_class_locomotive" target="_blank" rel="noopener">Wikipedia, NSW C38 class</a>.</li>
+        <li>The NSW 42 class: 6 EMD-design units by Clyde Engineering, 1955 to 1956; 18.98 m over couplers; 114 km/h; original Special Maroon livery. Source: <a href="https://en.wikipedia.org/wiki/New_South_Wales_42_class_locomotive" target="_blank" rel="noopener">Wikipedia, NSW 42 class</a>.</li>
+        <li>The NSW 422 class: 20 units by Clyde Engineering, 1969 to 1970, the first Australian locomotives with non-streamlined dual cabs; 18.44 m over couplers; 124 km/h. Source: <a href="https://en.wikipedia.org/wiki/New_South_Wales_422_class_locomotive" target="_blank" rel="noopener">Wikipedia, NSW 422 class</a>.</li>
+        <li>Victorian Railways S class: 18 by Clyde Engineering, 1957 to 1961; 18.72 m; 133 km/h; VR blue livery. Source: <a href="https://en.wikipedia.org/wiki/Victorian_Railways_S_class_(diesel)" target="_blank" rel="noopener">Wikipedia, VR S class</a>.</li>
+        <li>Victorian Railways B class: 26 by Clyde Engineering, 1952 to 1953, with a streamlined cab at each end; 18.70 m; 133 km/h. Source: <a href="https://en.wikipedia.org/wiki/Victorian_Railways_B_class_(diesel)" target="_blank" rel="noopener">Wikipedia, VR B class</a>.</li>
+        <li>SAR 930 class: 37 Alco DL500B units by AE Goodwin, 1955 to 1967, the basis of the NSW 44 class; 17.94 m; 113 km/h; SAR maroon and silver. Source: <a href="https://en.wikipedia.org/wiki/South_Australian_Railways_930_class" target="_blank" rel="noopener">Wikipedia, SAR 930 class</a>.</li>
         <li>HO is 1:87 and British OO is 1:76.2; both run on the same 16.5 mm track. Source: <a href="https://en.wikipedia.org/wiki/OO_gauge" target="_blank" rel="noopener">Wikipedia, OO gauge</a>.</li>
         <li>Particle board is sold in 2400 × 1200 mm sheets (the old 8 ft × 4 ft), commonly 16 mm thick. Source: <a href="https://blog.plyco.com.au/particle-board-dimensions" target="_blank" rel="noopener">Plyco, particle board dimensions</a>.</li>
         <li>Controllers of the era turned mains power into a 12 V DC track supply; the knob sets the voltage. Source: <a href="https://community.hornbyhobbies.com/forums/topic/23916-advice-needed-should-i-replace-my-hm-duette-controller/" target="_blank" rel="noopener">Hornby Hobbies forum on the H&amp;M Duette</a>.</li>
       </ul>
       <h3>What is simplified</h3>
-      <p class="src">Buildings, carriages and wagons are generic period-style models, not copies of particular kits or prototypes. The C38 is drawn in non-streamlined form. Speeds, tip-over limits and sounds are tuned to feel like a 1970s toy train rather than measured from one. Scale speed is shown as HO: model speed × 87.</p>
+      <p class="src">Buildings, carriages and wagons are generic period-style models, not copies of particular kits or prototypes. The C38 is drawn in non-streamlined form. The 422 class and the carriages are shown in representative colours where the original scheme was not confirmed by a source. Speeds, tip-over limits and sounds are tuned to feel like a 1970s toy train rather than measured from one. Scale speed is shown as HO: model speed × 87.</p>
       <div class="close-row"><button class="btn primary" id="guideClose">Start building</button></div>
     </div>
   </div>
@@ -561,19 +576,23 @@ const boardTopMat = new THREE.MeshStandardMaterial({ map: TEX.chipboard, roughne
 const edgeMat = new THREE.MeshStandardMaterial({ map: TEX.edge, roughness: 0.95 });
 const board = mesh(new THREE.BoxGeometry(BOARD_W, BOARD_T, BOARD_D), [edgeMat, edgeMat, boardTopMat, edgeMat, edgeMat, edgeMat]);
 board.position.y = -BOARD_T / 2; board.castShadow = false; world.add(board);
+sun.shadow.camera.far = 2400 + TABLE_H / 2; // clip the shadow volume at the board's underside
 const matSheet = mesh(new THREE.PlaneGeometry(BOARD_W - 40, BOARD_D - 40), new THREE.MeshStandardMaterial({ map: TEX.mat, roughness: 1 }), false);
 matSheet.rotation.x = -Math.PI / 2; matSheet.position.y = 0.4; matSheet.receiveShadow = true; world.add(matSheet);
 (function trestles(){
   const wood = mat(0x6b4a2c, { roughness: 0.9 });
+  const legs = new THREE.Group(); world.add(legs);
   for (const sx of [-1, 1]){
     const x = sx * (BOARD_W / 2 - 260);
-    for (const sz of [-1, 1]) at(world, box(40, TABLE_H - BOARD_T, 40, wood), x + sz * 12, -BOARD_T - (TABLE_H - BOARD_T) / 2, sz * (BOARD_D / 2 - 120), 0).rotation.z = sz * 0.05;
-    at(world, box(60, 50, BOARD_D - 160, wood), x, -BOARD_T - 25, 0);
-    at(world, box(30, 30, BOARD_D - 260, wood), x, -TABLE_H + 180, 0);
+    for (const sz of [-1, 1]) at(legs, box(40, TABLE_H - BOARD_T, 40, wood), x + sz * 12, -BOARD_T - (TABLE_H - BOARD_T) / 2, sz * (BOARD_D / 2 - 120), 0).rotation.z = sz * 0.05;
+    at(legs, box(60, 50, BOARD_D - 160, wood), x, -BOARD_T - 25, 0);
+    at(legs, box(30, 30, BOARD_D - 260, wood), x, -TABLE_H + 180, 0);
   }
-  for (const sz of [-1, 1]) at(world, box(BOARD_W - 80, 60, 30, wood), 0, -BOARD_T - 30, sz * (BOARD_D / 2 - 40));
+  for (const sz of [-1, 1]) at(legs, box(BOARD_W - 80, 60, 30, wood), 0, -BOARD_T - 30, sz * (BOARD_D / 2 - 40));
+  // nothing on the board throws a shadow below the board
+  legs.traverse(o => { if (o.isMesh) o.receiveShadow = false; });
   const floor = mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshStandardMaterial({ map: TEX.carpet, roughness: 1 }), false);
-  floor.rotation.x = -Math.PI / 2; floor.position.y = -TABLE_H; floor.receiveShadow = true; world.add(floor);
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -TABLE_H; floor.receiveShadow = false; world.add(floor);
 })();
 function applyFinish(){
   boardTopMat.map = L.finish === 'paint' ? TEX.paint : TEX.chipboard; boardTopMat.needsUpdate = true;
@@ -765,7 +784,7 @@ const SCEN = {
     windows(g, 110, 22, 22.6, 5, 12); at(g, box(10, 20, 1, 0x5a3a24), 0, 10, 22.6);
     verandah(g, 124, 24, 34, 22, M.corr('#8f3d2e'), 0x6b3a26);
     at(g, box(8, 16, 8, M.brick('#8a3f2a')), 40, 50, -6);
-    at(g, box(60, 9, 1.2, signMat((s.name || 'HILLVIEW').toUpperCase(), '#f4efe2', '#1d2a44', 320, 56)), 0, 30, 22.8);
+    if (s.name) at(g, box(60, 9, 1.2, signMat(s.name.toUpperCase(), '#f4efe2', '#1d2a44', 320, 56)), 0, 30, 22.8);
     return g; } },
   signalbox: { name: 'Signal box', sub: 'two storey', build: () => {
     const g = new THREE.Group(); at(g, box(42, 24, 30, M.brick('#8e4631')), 0, 12, 0);
@@ -952,26 +971,56 @@ function roofArc(len, halfW, color, R){
   const g = new THREE.CylinderGeometry(R, R, len, 18, 1, true, Math.PI / 2 - a, 2 * a); g.rotateZ(Math.PI / 2);
   const m = mesh(g, mat(color, { side: THREE.DoubleSide })); m.userData.drop = R * Math.cos(a); return m;
 }
-const VEH = {
-  '44': { len: 205, inset: [62, 62], kind: 'loco', build(){
-      const g = new THREE.Group(), red = 0x7c2a1d, dark = 0x1a1a1a, U = {};
-      at(g, box(196, 5, 29, dark), 0, 16.5, 0);
-      at(g, box(176, 27, 30, red), -6, 32.5, 0);
-      const nose = mesh(new THREE.CylinderGeometry(15, 15, 27, 20, 1, false, 0, Math.PI), mat(red)); nose.scale.x = 0.85; at(g, nose, 82, 32.5, 0);
-      at(g, box(176, 2.6, 30.4, 0xe0b85a), -6, 24, 0);
-      at(g, box(174, 2.5, 27, 0x5c5c5a), -6, 47.2, 0);
-      const nr = mesh(new THREE.CylinderGeometry(13.5, 13.5, 2.5, 20, 1, false, 0, Math.PI), mat(0x5c5c5a)); nr.scale.x = 0.85; at(g, nr, 82, 47.2, 0);
-      at(g, box(20, 8, 30.6, 0x16202a, { roughness: 0.2 }), 72, 39, 0);
-      at(g, box(14, 8, 30.6, 0x16202a, { roughness: 0.2 }), -86, 39, 0);
-      at(g, box(1, 8, 24, 0x16202a, { roughness: 0.2 }), -94.3, 39, 0);
-      const hl = cyl(2.2, 2.2, 1.5, 0xfff3c2, 12, { emissive: 0x665522 }); hl.rotation.z = Math.PI / 2; at(g, hl, 95.5, 42, 0);
-      for (const x of [-102, 100]) at(g, box(4, 4, 6, 0x333333), x, 17, 0);
-      for (const z of [-15.3, 15.3]) at(g, box(40, 6, 0.8, 0x6a6a6a), -40, 22, z);
-      U.bogies = [bogie(56, 3, 5.85), bogie(56, 3, 5.85)];
-      at(g, U.bogies[0], 62, 0, 0); at(g, U.bogies[1], -62, 0, 0);
-      U.fuel = at(g, box(60, 7, 24, 0x222222), 0, 10.5, 0);
-      U.cabX = 76; U.eye = 41; return { g, U };
-    } },
+/* Body shells for the diesel-electrics. Lengths are the prototype length over couplers at 1:87.
+   nose: 'round' = Alco DL500B rounded nose, 'bulldog' = Clyde/EMD streamlined cab, 'flat' = plain cab end. */
+function dieselLoco(o){
+  const g = new THREE.Group(), U = {}, dark = 0x1a1a1a;
+  const ext = (n) => n === 'bulldog' ? 26 : n === 'round' ? 13 : 0;
+  const eA = ext(o.noseA), eB = ext(o.noseB), half = o.len / 2 - 4;
+  const bodyLen = (half - eA) + (half - eB), bodyX = ((half - eA) - (half - eB)) / 2;
+  at(g, box(o.len - 9, 5, 29, dark), 0, 16.5, 0);
+  at(g, box(bodyLen, 27, 30, o.body), bodyX, 32.5, 0);
+  at(g, box(bodyLen - 2, 2.5, 27, o.roof), bodyX, 47.2, 0);
+  if (o.stripe){ at(g, box(bodyLen + 0.4, o.stripeH || 2.6, 30.4, o.stripe), bodyX, o.stripeY || 24, 0); }
+  const nose = (end, type) => {
+    const sx = end > 0 ? 1 : -1, x0 = sx * (half - ext(type));
+    if (type === 'flat'){
+      at(g, box(1, 8, 24, 0x16202a, { roughness: 0.2 }), sx * (half + 0.3), 39, 0);
+      at(g, box(14, 8, 30.6, 0x16202a, { roughness: 0.2 }), x0 - sx * 7, 39, 0);
+    } else if (type === 'round'){
+      const n = mesh(new THREE.CylinderGeometry(15, 15, 27, 20, 1, false, end > 0 ? 0 : Math.PI, Math.PI), mat(o.body)); n.scale.x = 0.85; at(g, n, x0, 32.5, 0);
+      const nr = mesh(new THREE.CylinderGeometry(13.5, 13.5, 2.5, 20, 1, false, end > 0 ? 0 : Math.PI, Math.PI), mat(o.roof)); nr.scale.x = 0.85; at(g, nr, x0, 47.2, 0);
+      at(g, box(20, 8, 30.6, 0x16202a, { roughness: 0.2 }), x0 - sx * 10, 39, 0);
+    } else {
+      // streamlined "bulldog" cab: low rounded hood ahead of a raised windscreen
+      const hood = mesh(new THREE.CylinderGeometry(14.5, 14.5, 22, 20, 1, false, end > 0 ? 0 : Math.PI, Math.PI), mat(o.body)); hood.scale.set(1.75, 1, 1); at(g, hood, x0, 30, 0);
+      at(g, box(22, 2.5, 24, o.roof), x0 + sx * 6, 41.2, 0);
+      at(g, box(1.5, 7, 22, 0x16202a, { roughness: 0.2 }), x0 - sx * 1, 44, 0);
+      at(g, box(12, 7, 30.6, 0x16202a, { roughness: 0.2 }), x0 - sx * 8, 42, 0);
+      if (o.stripe){ const st = mesh(new THREE.CylinderGeometry(14.7, 14.7, 2.6, 20, 1, false, end > 0 ? 0 : Math.PI, Math.PI), mat(o.stripe)); st.scale.set(1.75, 1, 1); at(g, st, x0, 24, 0); }
+    }
+    const hl = cyl(2.2, 2.2, 1.5, 0xfff3c2, 12, { emissive: 0x665522 }); hl.rotation.z = Math.PI / 2; at(g, hl, sx * (half + 0.5), type === 'bulldog' ? 36 : 42, 0);
+    at(g, box(4, 4, 6, 0x333333), sx * (o.len / 2 - 1), 17, 0);
+  };
+  nose(1, o.noseA); nose(-1, o.noseB);
+  for (const z of [-15.3, 15.3]) at(g, box(Math.min(40, bodyLen * 0.3), 6, 0.8, 0x6a6a6a), bodyX, 22, z);
+  const bx = o.len / 2 - 42;
+  U.bogies = [bogie(56, 3, 5.85), bogie(56, 3, 5.85)]; at(g, U.bogies[0], bx, 0, 0); at(g, U.bogies[1], -bx, 0, 0);
+  at(g, box(60, 7, 24, 0x222222), 0, 10.5, 0);
+  U.cabX = half - eA - 6; U.eye = o.noseA === 'bulldog' ? 44 : 41;
+  return { g, U };
+}
+const DIESEL = {
+  '44':  { len: 205, body: 0x7c2a1d, roof: 0x5c5c5a, stripe: 0xe0b85a, noseA: 'round', noseB: 'flat' },
+  '42':  { len: 218, body: 0x5a1f24, roof: 0x6a6a68, stripe: 0xd8b35a, stripeY: 30, stripeH: 1.6, noseA: 'bulldog', noseB: 'flat' },
+  '422': { len: 212, body: 0x7c2a1d, roof: 0x5c5c5a, stripe: 0xe0b85a, noseA: 'flat', noseB: 'flat' },
+  's':   { len: 215, body: 0x1f3a73, roof: 0x8e8e8a, stripe: 0xd9b24a, stripeY: 30, noseA: 'bulldog', noseB: 'flat' },
+  'b':   { len: 215, body: 0x1f3a73, roof: 0x8e8e8a, stripe: 0xd9b24a, stripeY: 30, noseA: 'bulldog', noseB: 'bulldog' },
+  '930': { len: 206, body: 0x6b1f2b, roof: 0x9a9da0, stripe: 0xc0c4c8, stripeH: 6, stripeY: 25.5, noseA: 'round', noseB: 'flat' },
+};
+const VEH = {};
+for (const [k, d] of Object.entries(DIESEL)) VEH[k] = { len: d.len, inset: [d.len / 2 - 42, d.len / 2 - 42], kind: 'loco', build: () => dieselLoco(d) };
+Object.assign(VEH, {
   c38: { len: 162, inset: [18, 34], kind: 'loco', build(){
       const g = new THREE.Group(), green = 0x1f4a2e, blk = 0x151515, U = {};
       at(g, box(150, 3, 31, blk), 0, 23, 0);
@@ -1027,7 +1076,7 @@ const VEH = {
       U.axles = [bogie(8, 1, 4.8), bogie(8, 1, 4.8)]; at(g, U.axles[0], 28, 0, 0); at(g, U.axles[1], -28, 0, 0);
       return { g, U };
     } },
-};
+});
 function carriage(kind, base, roofCol){
   const g = new THREE.Group(), U = {};
   at(g, box(222, 4, 28, 0x1a1a1a), 0, 16, 0);
@@ -1037,9 +1086,15 @@ function carriage(kind, base, roofCol){
   U.bogies = [bogie(28, 2, 4.8), bogie(28, 2, 4.8)]; at(g, U.bogies[0], 75, 0, 0); at(g, U.bogies[1], -75, 0, 0);
   return { g, U };
 }
-const LOCO_INFO = {
-  '44': 'NSW 44 class. 100 built by AE Goodwin, Auburn, 1957 to 1967. Model: 205 mm long (17.81 m at 1:87). Lima made an HO model of this class for the Australian market.',
-  c38: 'NSW C38 class Pacific (4-6-2). 30 built 1943 to 1949 for express passenger work. Lima made an HO model of the 38 class.',
+/* Locomotive roster: all seven were in Lima's Australian HO range. cars = carriages used for the passenger consist. */
+const LOCOS = {
+  '44':  { cars: 'ss',  horn: 'diesel', info: 'NSW 44 class. 100 Alco-design Co-Co diesel-electrics built by AE Goodwin, Auburn, 1957 to 1967. 17.81 m over couplers (205 mm here); 129 km/h. Shown in Indian red.' },
+  c38:   { cars: 'red', horn: 'steam',  info: 'NSW C38 class Pacific (4-6-2). 30 built 1943 to 1949 for express passenger work. Shown in the green that 3801 and 3830 carry.' },
+  '42':  { cars: 'ss',  horn: 'diesel', info: 'NSW 42 class. 6 streamlined EMD-design Co-Co units built by Clyde Engineering, Granville, 1955 to 1956. 18.98 m over couplers (218 mm here); 114 km/h. Shown in their original Special Maroon.' },
+  '422': { cars: 'ss',  horn: 'diesel', info: 'NSW 422 class. 20 built by Clyde Engineering, 1969 to 1970: the first Australian locomotives with non-streamlined cabs at both ends. 18.44 m over couplers (212 mm here); 124 km/h. Shown in NSW red.' },
+  s:     { cars: 'red', horn: 'diesel', info: 'Victorian Railways S class. 18 built by Clyde Engineering, 1957 to 1961, with one streamlined cab. 18.72 m (215 mm here); 133 km/h. Shown in VR blue and gold.' },
+  b:     { cars: 'red', horn: 'diesel', info: 'Victorian Railways B class. 26 built by Clyde Engineering, 1952 to 1953, with a streamlined cab at each end. 18.70 m (215 mm here); 133 km/h. Shown in VR blue and gold.' },
+  '930': { cars: 'ss',  horn: 'diesel', info: 'South Australian Railways 930 class. 37 Alco DL500B units built by AE Goodwin, 1955 to 1967, the design the NSW 44 class was based on. 17.94 m (206 mm here); 113 km/h. Shown in SAR maroon and silver.' },
 };
 
 /* =========================================================================
@@ -1080,8 +1135,9 @@ function cursorPose(c){
   return w;
 }
 function trainSpec(){
-  const loco = T.locoKey === '44' ? ['44'] : ['c38', 'c38t'];
-  const cons = T.consist === 'pass' ? (T.locoKey === '44' ? ['ss', 'ss', 'ss'] : ['red', 'red', 'red'])
+  const loco = T.locoKey === 'c38' ? ['c38', 'c38t'] : [T.locoKey];
+  const cars = LOCOS[T.locoKey].cars;
+  const cons = T.consist === 'pass' ? [cars, cars, cars]
     : T.consist === 'goods' ? ['open', 'louvre', 'open', 'louvre', 'brake'] : [];
   return loco.concat(cons);
 }
@@ -1302,7 +1358,7 @@ const Sound = {
     if (!this.on || !this.ctx || this.horn) return; const ctx = this.ctx, t = ctx.currentTime;
     const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.06);
     const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200; f.connect(g); g.connect(this.master);
-    const steam = T.locoKey === 'c38';
+    const steam = LOCOS[T.locoKey].horn === 'steam';
     const freqs = steam ? [740, 932] : [311, 370, 466];
     const os = freqs.map(fr => { const o = ctx.createOscillator(); o.type = steam ? 'sine' : 'sawtooth'; o.frequency.value = fr; o.connect(f); o.start(); return o; });
     if (steam) this.burst(0.8, 1800, 0.8, 0.05);
@@ -1400,6 +1456,7 @@ function setTool(t){
   tool = t; placeRot = 0;
   if (ghost){ scene.remove(ghost); ghost = null; }
   if (t && t.kind === 'scenery'){ selected = null; highlightSelection(); }
+  if (!t) highlightSelection();
   document.querySelectorAll('#scenGrid .part').forEach(b => b.setAttribute('aria-pressed', String(!!(t && t.type === b.dataset.type))));
   $('#bStart').classList.toggle('armed', !!(t && t.kind === 'start'));
 }
@@ -1424,8 +1481,10 @@ function placeScenery(type, pose){
   pushHistory();
   const s = { id: L.nextId++, type, x: pose.x, y: pose.y, h: pose.h };
   if (type === 'platform' || type === 'platformLong') s.name = 'Platform ' + (stationList().length + 1);
+  if (type === 'station') s.name = 'Hillview';
   L.scenery.push(s);
   rebuildScenery(false); rebuildChips();
+  if (NAMED[type]){ selected = { kind: 'scenery', id: s.id }; highlightSelection(); toast('Type its name in the name box in the build tray.'); }
   clearTimeout(saveTimer); saveTimer = setTimeout(() => store('chipboard-junction-v1', serialize()), 300);
 }
 
@@ -1475,7 +1534,7 @@ function setView(v){
   cam.mode = v;
   document.querySelectorAll('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
   camera.near = v === 'cab' ? 1 : 5; camera.fov = v === 'cab' ? 62 : 40; camera.updateProjectionMatrix();
-  if (v === 'follow'){ cam.r = Math.min(cam.r, 800); cam.ph = 0.95; }
+  if (v === 'follow'){ cam.r = Math.min(cam.r, 950); cam.ph = 0.95; }
   if (v === 'orbit'){ cam.tx = 0; cam.ty = 0; cam.tz = 40; cam.r = fitRadius(); }
   rebuildChips();
 }
@@ -1501,7 +1560,7 @@ function updateCamera(dt){
   cam.look = null;
   if (mode === 'play' && cam.mode === 'follow' && lead){
     const k = Math.min(1, dt * 3), mid = T.vehicles[Math.floor((T.vehicles.length - 1) / 2)].g.position;
-    cam.tx += ((lead.g.position.x + mid.x) / 2 - cam.tx) * k; cam.tz += ((lead.g.position.z + mid.z) / 2 - cam.tz) * k; cam.ty += (lead.g.position.y + 30 - cam.ty) * k;
+    cam.tx += (lead.g.position.x * 0.7 + mid.x * 0.3 - cam.tx) * k; cam.tz += (lead.g.position.z * 0.7 + mid.z * 0.3 - cam.tz) * k; cam.ty += (lead.g.position.y + 30 - cam.ty) * k;
   }
   applyOrbit();
 }
@@ -1609,10 +1668,26 @@ function updateSelectionBox(){
   if (selBox){ scene.remove(selBox); selBox = null; }
   if (selected && selected.kind === 'scenery'){ const m = scenMeshes.get(selected.id); if (m){ selBox = new THREE.BoxHelper(m, 0xffc933); scene.add(selBox); } }
 }
+const NAMED = { platform: 'Platform name', platformLong: 'Platform name', station: 'Station name' };
 function highlightSelection(){
   for (const [id, m] of pieceMeshes) m.userData.hl.opacity = selected && selected.kind === 'piece' && selected.id === id ? 0.45 : 0;
   updateSelectionBox();
+  const s = selected && selected.kind === 'scenery' && scById(selected.id);
+  const field = $('#nameField');
+  if (s && NAMED[s.type]){ field.hidden = false; $('#nameLbl').textContent = NAMED[s.type]; if (document.activeElement !== nameIn) nameIn.value = s.name || ''; }
+  else field.hidden = true;
 }
+const nameIn = $('#nameIn');
+let renameTimer = 0, renameHistoryPushed = false;
+nameIn.addEventListener('focus', () => { renameHistoryPushed = false; });
+nameIn.addEventListener('input', () => {
+  const s = selected && selected.kind === 'scenery' && scById(selected.id); if (!s) return;
+  if (!renameHistoryPushed){ pushHistory(); renameHistoryPushed = true; }
+  s.name = nameIn.value.trim().slice(0, 18);
+  clearTimeout(renameTimer);
+  renameTimer = setTimeout(() => { const m = scenMeshes.get(s.id); if (m){ scenGroup.remove(m); scenMeshes.delete(s.id); } rebuildScenery(false); store('chipboard-junction-v1', serialize()); }, 250);
+});
+nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Escape'){ e.preventDefault(); nameIn.blur(); canvas.focus(); } });
 function throwPoint(p){
   p.state = p.state ? 0 : 1; setLever(p); Sound.clack(); rebuildChips();
   clearTimeout(saveTimer); saveTimer = setTimeout(() => store('chipboard-junction-v1', serialize()), 300);
@@ -1768,10 +1843,11 @@ const hornBtn = $('#bHorn');
 hornBtn.addEventListener('pointerdown', () => { ensureSound(); Sound.hornOn(); });
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => hornBtn.addEventListener(ev, () => Sound.hornOff()));
 $('#bRerail').onclick = () => { setThrottle(0); if (placeTrain()) toast('Back on the rails.', 'good'); else toast('There is nowhere long enough to put the train.', 'bad'); };
-$('#selLoco').onchange = (e) => { T.locoKey = e.target.value; T.onboard = []; placeTrain(); updateTrainCard(); updateTally(); };
-$('#selConsist').onchange = (e) => { T.consist = e.target.value; T.onboard = []; placeTrain(); updateTrainCard(); updateTally(); };
+function trainChanged(){ T.onboard = []; setThrottle(0); if (mode === 'play'){ if (!placeTrain()) toast('There is nowhere long enough to put that train.', 'bad'); } else T.needsPlace = true; updateTrainCard(); updateTally(); }
+$('#selLoco').onchange = (e) => { T.locoKey = e.target.value; trainChanged(); };
+$('#selConsist').onchange = (e) => { T.consist = e.target.value; trainChanged(); };
 document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-function updateTrainCard(){ const n = trainSpec().length; $('#trainCard').textContent = LOCO_INFO[T.locoKey] + ` Train: ${n} vehicle${n > 1 ? 's' : ''}.`; }
+function updateTrainCard(){ const n = trainSpec().length; $('#trainCard').textContent = LOCOS[T.locoKey].info + ` Train: ${n} vehicle${n > 1 ? 's' : ''}.`; }
 function updateTally(){ $('#tDeliv').textContent = T.delivered; $('#tOn').textContent = T.onboard.length; $('#tGoods').textContent = T.goods; $('#tDerail').textContent = T.derails; }
 
 /* Sound toggle */
@@ -1799,7 +1875,7 @@ window.addEventListener('keydown', (e) => {
     else if (k === 'r') rotateThing(1);
     else if (k === 'q') rotateThing(1);
     else if (k === 'e') rotateThing(-1);
-    else if (k === 'escape') { setTool(null); selected = null; highlightSelection(); }
+    else if (k === 'escape') { if (tool) setTool(null); else { selected = null; highlightSelection(); } }
   } else {
     if (e.target === knob) return;
     if (k === 'arrowup'){ setThrottle(T.throttle + 0.05); e.preventDefault(); }
@@ -1821,7 +1897,7 @@ function stepTrain(dt){
   const volts = T.throttle * 12;
   const drive = Math.max(0, (volts - 2) / 10);           // motors stall below ~2 V
   const target = drive * VMAX * (T.dirRev ? -1 : 1);
-  const tau = Math.sign(target) !== Math.sign(T.v) && Math.abs(T.v) > 1 ? 0.25 : (T.locoKey === 'c38' ? 0.6 : 0.45);
+  const tau = Math.sign(target) !== Math.sign(T.v) && Math.abs(T.v) > 1 ? 0.25 : (LOCOS[T.locoKey].horn === 'steam' ? 0.6 : 0.45);
   T.v += (target - T.v) * Math.min(1, dt / tau);
   if (Math.abs(T.v) < 0.5 && target === 0) T.v = 0;
   const ds = T.v * dt;
@@ -1852,7 +1928,7 @@ function stepTrain(dt){
     if (i < T.vehicles.length - 1){ const n = cursorPose(T.vehicles[i + 1].front); const g = Math.hypot(r.x - n.x, r.y - n.y); if (g > v.gapNext + 4 || g < v.gapNext - 16){ derail('A point changed under the train and split it!'); return; } }
   }
   // overspeed on curves
-  const amax = T.locoKey === 'c38' ? 820 : 900;
+  const amax = LOCOS[T.locoKey].horn === 'steam' ? 820 : 900;
   let worst = 0, side = 1;
   for (const c of T.pivots){ const p = cursorPose(c); const a = T.v * T.v * Math.abs(p.k); if (a > worst){ worst = a; side = Math.sign(p.k) || 1; } }
   if (worst > amax){ T.tipT += dt; if (T.tipT > 0.12){ derail('Too fast on the curve! The train tipped over.', { side: -side }); return; } } else T.tipT = 0;
